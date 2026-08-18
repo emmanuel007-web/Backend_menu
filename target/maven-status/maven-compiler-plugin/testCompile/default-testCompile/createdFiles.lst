@@ -1,0 +1,6 @@
+com/menusaas/auth/AuthFlowIT.class
+com/menusaas/auth/security/JwtServiceTest.class
+com/menusaas/products/ProductServiceTest.class
+com/menusaas/qr/QrCodeServiceTest.class
+com/menusaas/tenancy/TenantIsolationIT.class
+com/menusaas/BaseIntegrationTest.class

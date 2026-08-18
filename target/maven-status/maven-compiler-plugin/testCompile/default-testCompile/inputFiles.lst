@@ -1,0 +1,6 @@
+/home/clarent/Documentos/Menu_restaurant/backend/src/test/java/com/menusaas/BaseIntegrationTest.java
+/home/clarent/Documentos/Menu_restaurant/backend/src/test/java/com/menusaas/auth/AuthFlowIT.java
+/home/clarent/Documentos/Menu_restaurant/backend/src/test/java/com/menusaas/auth/security/JwtServiceTest.java
+/home/clarent/Documentos/Menu_restaurant/backend/src/test/java/com/menusaas/products/ProductServiceTest.java
+/home/clarent/Documentos/Menu_restaurant/backend/src/test/java/com/menusaas/qr/QrCodeServiceTest.java
+/home/clarent/Documentos/Menu_restaurant/backend/src/test/java/com/menusaas/tenancy/TenantIsolationIT.java
