@@ -1,9 +1,8 @@
 package com.menusaas.auth.service;
 
+import com.menusaas.auth.dto.AuthResponse;
 import com.menusaas.auth.dto.LoginRequest;
-import com.menusaas.auth.dto.RefreshRequest;
 import com.menusaas.auth.dto.RegisterRequest;
-import com.menusaas.auth.dto.TokenResponse;
 import com.menusaas.auth.security.JwtService;
 import com.menusaas.auth.security.RefreshToken;
 import com.menusaas.auth.security.RefreshTokenRepository;
@@ -14,11 +13,11 @@ import com.menusaas.shared.api.BadRequestException;
 import com.menusaas.shared.api.ConflictException;
 import com.menusaas.shared.api.ForbiddenException;
 import com.menusaas.shared.api.ResourceNotFoundException;
+import com.menusaas.shared.security.SecurityUtils;
 import com.menusaas.users.entity.Role;
 import com.menusaas.users.entity.User;
 import com.menusaas.users.repository.RoleRepository;
 import com.menusaas.users.repository.UserRepository;
-import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -43,8 +42,15 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
 
+    /**
+     * Resultado interno: los tokens se entregan al controlador para
+     * escribirlos como cookies HttpOnly (nunca llegan al cuerpo JSON).
+     */
+    public record AuthResult(String accessToken, String refreshToken, AuthResponse.UserInfo user) {
+    }
+
     @Transactional
-    public TokenResponse register(RegisterRequest request) {
+    public AuthResult register(RegisterRequest request) {
         String email = normalizeEmail(request.email());
 
         if (userRepository.existsByEmail(email)) {
@@ -75,11 +81,11 @@ public class AuthService {
         user = userRepository.save(user);
 
         log.info("Nuevo restaurante registrado: slug={}, usuario={}", restaurant.getSlug(), email);
-        return buildTokenResponse(user);
+        return buildAuthResult(user);
     }
 
     @Transactional
-    public TokenResponse login(LoginRequest request) {
+    public AuthResult login(LoginRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(normalizeEmail(request.email()), request.password()));
 
@@ -89,15 +95,15 @@ public class AuthService {
         if (!user.isActive()) {
             throw new ForbiddenException("La cuenta está desactivada");
         }
-        return buildTokenResponse(user);
+        return buildAuthResult(user);
     }
 
     @Transactional
-    public TokenResponse refresh(RefreshRequest request) {
-        RefreshToken stored = refreshTokenRepository.findByToken(request.refreshToken())
+    public AuthResult refresh(String refreshToken) {
+        RefreshToken stored = refreshTokenRepository.findByToken(refreshToken)
                 .filter(t -> !t.isRevoked())
                 .filter(t -> t.getExpiresAt().isAfter(Instant.now()))
-                .orElseThrow(() -> new BadRequestException("Refresh token inválido o expirado"));
+                .orElseThrow(() -> new BadRequestException("Sesión expirada, inicie sesión nuevamente"));
 
         User user = userRepository.findById(stored.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
@@ -110,7 +116,21 @@ public class AuthService {
         stored.setRevoked(true);
         refreshTokenRepository.save(stored);
 
-        return buildTokenResponse(user);
+        return buildAuthResult(user);
+    }
+
+    @Transactional(readOnly = true)
+    public AuthResponse.UserInfo currentUserInfo() {
+        Long userId = SecurityUtils.currentUser().getId();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        return new AuthResponse.UserInfo(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getRole().getName(),
+                user.getRestaurant() != null ? user.getRestaurant().getId() : null
+        );
     }
 
     @Transactional
@@ -130,7 +150,7 @@ public class AuthService {
         refreshTokenRepository.deleteByUserId(userId);
     }
 
-    private TokenResponse buildTokenResponse(User user) {
+    private AuthResult buildAuthResult(User user) {
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
@@ -141,18 +161,14 @@ public class AuthService {
                 .revoked(false)
                 .build());
 
-        return new TokenResponse(
-                accessToken,
-                refreshToken,
-                jwtService.accessTokenTtlSeconds(),
-                new TokenResponse.UserInfo(
-                        user.getId(),
-                        user.getName(),
-                        user.getEmail(),
-                        user.getRole().getName(),
-                        user.getRestaurant() != null ? user.getRestaurant().getId() : null
-                )
+        AuthResponse.UserInfo userInfo = new AuthResponse.UserInfo(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getRole().getName(),
+                user.getRestaurant() != null ? user.getRestaurant().getId() : null
         );
+        return new AuthResult(accessToken, refreshToken, userInfo);
     }
 
     private String normalizeEmail(String email) {

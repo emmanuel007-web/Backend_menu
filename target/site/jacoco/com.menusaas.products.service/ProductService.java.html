@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProductService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">menu-saas-backend</a> &gt; <a href="index.source.html" class="el_package">com.menusaas.products.service</a> &gt; <span class="el_source">ProductService.java</span></div><h1>ProductService.java</h1><pre class="source lang-java linenums">package com.menusaas.products.service;
+
+import com.menusaas.categories.repository.CategoryRepository;
+import com.menusaas.files.security.SignedUrlService;
+import com.menusaas.products.dto.ProductRequest;
+import com.menusaas.products.dto.ProductResponse;
+import com.menusaas.products.entity.Product;
+import com.menusaas.products.repository.ProductRepository;
+import com.menusaas.shared.api.ResourceNotFoundException;
+import com.menusaas.shared.security.SecurityUtils;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+public class ProductService {
+
+    private final ProductRepository productRepository;
+    private final CategoryRepository categoryRepository;
+    private final SignedUrlService signedUrlService;
+
+    @Transactional(readOnly = true)
+    public Page&lt;ProductResponse&gt; listMine(Long categoryId, Pageable pageable) {
+<span class="nc" id="L27">        Long restaurantId = SecurityUtils.currentRestaurantId();</span>
+<span class="nc bnc" id="L28" title="All 2 branches missed.">        Page&lt;Product&gt; products = categoryId != null</span>
+<span class="nc" id="L29">                ? productRepository.findByCategoryIdAndRestaurantIdOrderByPositionAsc(categoryId, restaurantId, pageable)</span>
+<span class="nc" id="L30">                : productRepository.findByRestaurantIdOrderByPositionAsc(restaurantId, pageable);</span>
+<span class="nc" id="L31">        return products.map(this::toResponse);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public ProductResponse getMine(Long id) {
+<span class="nc" id="L36">        return toResponse(findScoped(id));</span>
+    }
+
+    @Transactional
+    public ProductResponse createMine(ProductRequest request) {
+<span class="fc" id="L41">        Long restaurantId = SecurityUtils.currentRestaurantId();</span>
+<span class="fc" id="L42">        validateCategoryBelongsToTenant(request.categoryId(), restaurantId);</span>
+
+<span class="fc" id="L44">        Product product = Product.builder()</span>
+<span class="fc" id="L45">                .restaurantId(restaurantId)</span>
+<span class="fc" id="L46">                .categoryId(request.categoryId())</span>
+<span class="fc" id="L47">                .name(request.name().trim())</span>
+<span class="fc" id="L48">                .description(request.description())</span>
+<span class="fc" id="L49">                .price(request.price())</span>
+<span class="fc" id="L50">                .imageUrl(request.imageUrl())</span>
+<span class="pc bpc" id="L51" title="1 of 4 branches missed.">                .available(request.available() == null || request.available())</span>
+<span class="fc bfc" id="L52" title="All 2 branches covered.">                .position(request.position() != null ? request.position() : 0)</span>
+<span class="fc" id="L53">                .build();</span>
+<span class="fc" id="L54">        return toResponse(productRepository.save(product));</span>
+    }
+
+    @Transactional
+    public ProductResponse updateMine(Long id, ProductRequest request) {
+<span class="nc" id="L59">        Product product = findScoped(id);</span>
+<span class="nc" id="L60">        validateCategoryBelongsToTenant(request.categoryId(), product.getRestaurantId());</span>
+
+<span class="nc" id="L62">        product.setCategoryId(request.categoryId());</span>
+<span class="nc" id="L63">        product.setName(request.name().trim());</span>
+<span class="nc bnc" id="L64" title="All 2 branches missed.">        if (request.description() != null) product.setDescription(request.description());</span>
+<span class="nc" id="L65">        product.setPrice(request.price());</span>
+<span class="nc bnc" id="L66" title="All 2 branches missed.">        if (request.imageUrl() != null) product.setImageUrl(request.imageUrl());</span>
+<span class="nc bnc" id="L67" title="All 2 branches missed.">        if (request.available() != null) product.setAvailable(request.available());</span>
+<span class="nc bnc" id="L68" title="All 2 branches missed.">        if (request.position() != null) product.setPosition(request.position());</span>
+<span class="nc" id="L69">        return toResponse(productRepository.save(product));</span>
+    }
+
+    @Transactional
+    public void deleteMine(Long id) {
+<span class="nc" id="L74">        Product product = findScoped(id);</span>
+<span class="nc" id="L75">        productRepository.delete(product);</span>
+<span class="nc" id="L76">    }</span>
+
+    private Product findScoped(Long id) {
+<span class="pc" id="L79">        return productRepository.findByIdAndRestaurantId(id, SecurityUtils.currentRestaurantId())</span>
+<span class="pc" id="L80">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Producto no encontrado&quot;));</span>
+    }
+
+    /**
+     * La categoría debe pertenecer al mismo tenant, de lo contrario se rechaza
+     * (evita mover productos entre restaurantes mediante categoryId).
+     */
+    private void validateCategoryBelongsToTenant(Long categoryId, Long restaurantId) {
+<span class="fc bfc" id="L88" title="All 2 branches covered.">        if (!categoryRepository.existsByIdAndRestaurantId(categoryId, restaurantId)) {</span>
+<span class="fc" id="L89">            throw new ResourceNotFoundException(&quot;Categoría no encontrada en este restaurante&quot;);</span>
+        }
+<span class="fc" id="L91">    }</span>
+
+    private ProductResponse toResponse(Product p) {
+<span class="fc" id="L94">        return new ProductResponse(</span>
+<span class="fc" id="L95">                p.getId(), p.getRestaurantId(), p.getCategoryId(), p.getName(), p.getDescription(),</span>
+<span class="fc" id="L96">                p.getPrice(), signedUrlService.toSignedUrlOrNull(p.getImageUrl()), p.isAvailable(), p.getPosition(),</span>
+<span class="fc" id="L97">                p.getCreatedAt(), p.getUpdatedAt()</span>
+        );
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

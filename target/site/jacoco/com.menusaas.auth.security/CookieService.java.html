@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CookieService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">menu-saas-backend</a> &gt; <a href="index.source.html" class="el_package">com.menusaas.auth.security</a> &gt; <span class="el_source">CookieService.java</span></div><h1>CookieService.java</h1><pre class="source lang-java linenums">package com.menusaas.auth.security;
+
+import com.menusaas.config.AppProperties;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.stereotype.Component;
+
+/**
+ * Emisión y limpieza de cookies HttpOnly para access/refresh tokens.
+ * - HttpOnly: JavaScript NO puede leer los tokens (mitiga robo por XSS).
+ * - SameSite=Strict: la cookie no viaja en peticiones cross-site (mitiga CSRF).
+ * - Secure: solo se envía por HTTPS (obligatorio en el perfil prod).
+ */
+@Component
+public class CookieService {
+
+    public static final String ACCESS_COOKIE = &quot;access_token&quot;;
+    public static final String REFRESH_COOKIE = &quot;refresh_token&quot;;
+    private static final String COOKIE_PATH_AUTH = &quot;/api/auth&quot;;
+
+    private final AppProperties appProperties;
+
+<span class="fc" id="L24">    public CookieService(AppProperties appProperties) {</span>
+<span class="fc" id="L25">        this.appProperties = appProperties;</span>
+<span class="fc" id="L26">    }</span>
+
+    public void setAccessToken(HttpServletResponse response, String token) {
+<span class="fc" id="L29">        response.addCookie(cookie(ACCESS_COOKIE, token,</span>
+<span class="fc" id="L30">                appProperties.jwt().accessTokenTtlMinutes() * 60, &quot;/&quot;));</span>
+<span class="fc" id="L31">    }</span>
+
+    public void setRefreshToken(HttpServletResponse response, String token) {
+<span class="fc" id="L34">        response.addCookie(cookie(REFRESH_COOKIE, token,</span>
+<span class="fc" id="L35">                appProperties.jwt().refreshTokenTtlDays() * 86400, COOKIE_PATH_AUTH));</span>
+<span class="fc" id="L36">    }</span>
+
+    /**
+     * Elimina las cookies del navegador (logout).
+     */
+    public void clearTokens(HttpServletRequest request, HttpServletResponse response) {
+<span class="fc" id="L42">        Cookie access = new Cookie(ACCESS_COOKIE, &quot;&quot;);</span>
+<span class="fc" id="L43">        access.setMaxAge(0);</span>
+<span class="fc" id="L44">        access.setPath(&quot;/&quot;);</span>
+<span class="fc" id="L45">        applyCommonAttributes(access);</span>
+
+<span class="fc" id="L47">        Cookie refresh = new Cookie(REFRESH_COOKIE, &quot;&quot;);</span>
+<span class="fc" id="L48">        refresh.setMaxAge(0);</span>
+<span class="fc" id="L49">        refresh.setPath(COOKIE_PATH_AUTH);</span>
+<span class="fc" id="L50">        applyCommonAttributes(refresh);</span>
+
+<span class="fc" id="L52">        response.addCookie(access);</span>
+<span class="fc" id="L53">        response.addCookie(refresh);</span>
+<span class="fc" id="L54">    }</span>
+
+    public String readAccessToken(HttpServletRequest request) {
+<span class="fc" id="L57">        return readCookie(request, ACCESS_COOKIE);</span>
+    }
+
+    public String readRefreshToken(HttpServletRequest request) {
+<span class="fc" id="L61">        return readCookie(request, REFRESH_COOKIE);</span>
+    }
+
+    private String readCookie(HttpServletRequest request, String name) {
+<span class="fc bfc" id="L65" title="All 2 branches covered.">        if (request.getCookies() == null) {</span>
+<span class="fc" id="L66">            return null;</span>
+        }
+<span class="fc bfc" id="L68" title="All 2 branches covered.">        for (Cookie cookie : request.getCookies()) {</span>
+<span class="pc bpc" id="L69" title="2 of 6 branches missed.">            if (name.equals(cookie.getName()) &amp;&amp; cookie.getValue() != null &amp;&amp; !cookie.getValue().isBlank()) {</span>
+<span class="fc" id="L70">                return cookie.getValue();</span>
+            }
+        }
+<span class="fc" id="L73">        return null;</span>
+    }
+
+    private Cookie cookie(String name, String value, int maxAge, String path) {
+<span class="fc" id="L77">        Cookie cookie = new Cookie(name, value);</span>
+<span class="fc" id="L78">        cookie.setMaxAge(maxAge);</span>
+<span class="fc" id="L79">        cookie.setPath(path);</span>
+<span class="fc" id="L80">        applyCommonAttributes(cookie);</span>
+<span class="fc" id="L81">        return cookie;</span>
+    }
+
+    private void applyCommonAttributes(Cookie cookie) {
+<span class="fc" id="L85">        cookie.setHttpOnly(true);</span>
+<span class="fc" id="L86">        cookie.setSecure(appProperties.security().cookiesSecure());</span>
+<span class="fc" id="L87">        cookie.setAttribute(&quot;SameSite&quot;, &quot;Strict&quot;);</span>
+<span class="fc" id="L88">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

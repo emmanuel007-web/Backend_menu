@@ -9,10 +9,10 @@ import com.menusaas.shared.api.ConflictException;
 import com.menusaas.shared.api.ResourceNotFoundException;
 import com.menusaas.shared.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -22,11 +22,9 @@ public class CategoryService {
     private final ProductRepository productRepository;
 
     @Transactional(readOnly = true)
-    public List<CategoryResponse> listMine() {
-        return categoryRepository.findByRestaurantIdOrderByPositionAsc(SecurityUtils.currentRestaurantId())
-                .stream()
-                .map(this::toResponse)
-                .toList();
+    public Page<CategoryResponse> listMine(Pageable pageable) {
+        return categoryRepository.findByRestaurantIdOrderByPositionAsc(SecurityUtils.currentRestaurantId(), pageable)
+                .map(this::toResponse);
     }
 
     @Transactional(readOnly = true)

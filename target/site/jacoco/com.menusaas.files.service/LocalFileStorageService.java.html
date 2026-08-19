@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LocalFileStorageService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">menu-saas-backend</a> &gt; <a href="index.source.html" class="el_package">com.menusaas.files.service</a> &gt; <span class="el_source">LocalFileStorageService.java</span></div><h1>LocalFileStorageService.java</h1><pre class="source lang-java linenums">package com.menusaas.files.service;
+
+import com.menusaas.config.AppProperties;
+import com.menusaas.shared.api.BadRequestException;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+/**
+ * Almacenamiento local. La extensión y el MIME se derivan de los BYTES del
+ * archivo (magic bytes), NO del nombre enviado por el cliente: un archivo
+ * &quot;malware.exe&quot; con bytes de JPEG se guarda como .jpg, y un archivo que mienta
+ * su Content-Type se rechaza.
+ */
+@Service
+public class LocalFileStorageService implements FileStorageService {
+
+<span class="fc" id="L25">    private static final Set&lt;String&gt; ALLOWED_TYPES = Set.of(</span>
+            &quot;image/jpeg&quot;, &quot;image/png&quot;, &quot;image/webp&quot;, &quot;image/gif&quot;
+    );
+
+    /** Mapa magic-bytes → (Content-Type, extensión). */
+<span class="fc" id="L30">    private static final Map&lt;String, String[]&gt; MAGIC_BYTE_TYPES = Map.of(</span>
+            &quot;ffd8ff&quot;, new String[]{&quot;image/jpeg&quot;, &quot;.jpg&quot;},
+            &quot;89504e47&quot;, new String[]{&quot;image/png&quot;, &quot;.png&quot;},
+            &quot;47494638&quot;, new String[]{&quot;image/gif&quot;, &quot;.gif&quot;},   // GIF8
+            &quot;52494646&quot;, new String[]{&quot;image/webp&quot;, &quot;.webp&quot;}  // RIFF....WEBP (se verifica más abajo)
+    );
+
+    private final Path uploadRoot;
+
+<span class="fc" id="L39">    public LocalFileStorageService(AppProperties appProperties) {</span>
+<span class="fc" id="L40">        this.uploadRoot = Path.of(appProperties.uploadDir()).toAbsolutePath().normalize();</span>
+        try {
+<span class="fc" id="L42">            Files.createDirectories(uploadRoot);</span>
+<span class="nc" id="L43">        } catch (IOException ex) {</span>
+<span class="nc" id="L44">            throw new IllegalStateException(&quot;No se pudo crear el directorio de uploads&quot;, ex);</span>
+<span class="fc" id="L45">        }</span>
+<span class="fc" id="L46">    }</span>
+
+    @Override
+    public String store(MultipartFile file) {
+<span class="pc bpc" id="L50" title="2 of 4 branches missed.">        if (file == null || file.isEmpty()) {</span>
+<span class="nc" id="L51">            throw new BadRequestException(&quot;El archivo está vacío&quot;);</span>
+        }
+<span class="fc bfc" id="L53" title="All 2 branches covered.">        if (!isSupported(file)) {</span>
+<span class="fc" id="L54">            throw new BadRequestException(&quot;Formato no permitido. Use JPG, PNG, WEBP o GIF&quot;);</span>
+        }
+        try {
+<span class="fc" id="L57">            byte[] bytes = file.getBytes();</span>
+<span class="fc" id="L58">            String detectedType = detectContentType(bytes);</span>
+<span class="fc bfc" id="L59" title="All 2 branches covered.">            if (!ALLOWED_TYPES.contains(detectedType)) {</span>
+<span class="fc" id="L60">                throw new BadRequestException(&quot;El contenido del archivo no es una imagen permitida&quot;);</span>
+            }
+
+<span class="fc" id="L63">            String extension = extensionFor(detectedType);</span>
+<span class="fc" id="L64">            String filename = UUID.randomUUID() + extension;</span>
+<span class="fc" id="L65">            Path target = uploadRoot.resolve(filename).normalize();</span>
+<span class="pc bpc" id="L66" title="1 of 2 branches missed.">            if (!target.startsWith(uploadRoot)) {</span>
+<span class="nc" id="L67">                throw new BadRequestException(&quot;Nombre de archivo inválido&quot;);</span>
+            }
+<span class="fc" id="L69">            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);</span>
+<span class="fc" id="L70">            return filename;</span>
+<span class="nc" id="L71">        } catch (IOException ex) {</span>
+<span class="nc" id="L72">            throw new IllegalStateException(&quot;No se pudo guardar el archivo&quot;, ex);</span>
+        }
+    }
+
+    @Override
+    public StoredFile load(String fileId) {
+<span class="pc bpc" id="L78" title="1 of 4 branches missed.">        if (fileId == null || !fileId.matches(&quot;[A-Za-z0-9._-]+&quot;)) {</span>
+<span class="fc" id="L79">            throw new BadRequestException(&quot;Identificador de archivo inválido&quot;);</span>
+        }
+<span class="fc" id="L81">        Path target = uploadRoot.resolve(fileId).normalize();</span>
+<span class="pc bpc" id="L82" title="1 of 2 branches missed.">        if (!target.startsWith(uploadRoot)) {</span>
+<span class="nc" id="L83">            throw new BadRequestException(&quot;Identificador de archivo inválido&quot;);</span>
+        }
+<span class="fc bfc" id="L85" title="All 2 branches covered.">        if (!Files.isRegularFile(target)) {</span>
+<span class="fc" id="L86">            throw new BadRequestException(&quot;El archivo no existe&quot;);</span>
+        }
+        try {
+<span class="fc" id="L89">            return new StoredFile(fileId, Files.readAllBytes(target), contentTypeFor(fileId));</span>
+<span class="nc" id="L90">        } catch (IOException ex) {</span>
+<span class="nc" id="L91">            throw new IllegalStateException(&quot;No se pudo leer el archivo&quot;, ex);</span>
+        }
+    }
+
+    @Override
+    public boolean isSupported(MultipartFile file) {
+<span class="fc" id="L97">        String declared = file.getContentType();</span>
+<span class="fc bfc" id="L98" title="All 4 branches covered.">        return declared == null || ALLOWED_TYPES.contains(declared);</span>
+    }
+
+    /**
+     * Detecta el Content-Type real a partir de los magic bytes.
+     * Soporta JPEG, PNG, GIF y WEBP.
+     */
+    private String detectContentType(byte[] bytes) {
+<span class="pc bpc" id="L106" title="1 of 2 branches missed.">        if (bytes.length &lt; 12) {</span>
+<span class="nc" id="L107">            return &quot;application/octet-stream&quot;;</span>
+        }
+<span class="fc" id="L109">        String hex = hexPrefix(bytes, 4);</span>
+<span class="fc bfc" id="L110" title="All 2 branches covered.">        for (Map.Entry&lt;String, String[]&gt; entry : MAGIC_BYTE_TYPES.entrySet()) {</span>
+<span class="fc bfc" id="L111" title="All 2 branches covered.">            if (hex.startsWith(entry.getKey())) {</span>
+<span class="fc" id="L112">                String[] candidate = entry.getValue();</span>
+<span class="pc bpc" id="L113" title="1 of 2 branches missed.">                if (&quot;image/webp&quot;.equals(candidate[0])) {</span>
+                    // RIFF + &quot;WEBP&quot; en los bytes 8..11
+<span class="nc bnc" id="L115" title="All 8 branches missed.">                    if (bytes[8] == 'W' &amp;&amp; bytes[9] == 'E' &amp;&amp; bytes[10] == 'B' &amp;&amp; bytes[11] == 'P') {</span>
+<span class="nc" id="L116">                        return &quot;image/webp&quot;;</span>
+                    }
+<span class="nc" id="L118">                    return &quot;application/octet-stream&quot;;</span>
+                }
+<span class="pc bpc" id="L120" title="1 of 2 branches missed.">                if (&quot;image/gif&quot;.equals(candidate[0])) {</span>
+                    // GIF87a / GIF89a
+<span class="nc bnc" id="L122" title="All 6 branches missed.">                    if ((bytes[4] == '7' || bytes[4] == '9') &amp;&amp; bytes[5] == 'a') {</span>
+<span class="nc" id="L123">                        return &quot;image/gif&quot;;</span>
+                    }
+<span class="nc" id="L125">                    return &quot;application/octet-stream&quot;;</span>
+                }
+<span class="fc" id="L127">                return candidate[0];</span>
+            }
+<span class="fc" id="L129">        }</span>
+<span class="fc" id="L130">        return &quot;application/octet-stream&quot;;</span>
+    }
+
+    private String hexPrefix(byte[] bytes, int n) {
+<span class="fc" id="L134">        StringBuilder sb = new StringBuilder();</span>
+<span class="pc bpc" id="L135" title="1 of 4 branches missed.">        for (int i = 0; i &lt; n &amp;&amp; i &lt; bytes.length; i++) {</span>
+<span class="fc" id="L136">            sb.append(String.format(&quot;%02x&quot;, bytes[i]));</span>
+        }
+<span class="fc" id="L138">        return sb.toString();</span>
+    }
+
+    private String extensionFor(String contentType) {
+<span class="pc bpc" id="L142" title="3 of 5 branches missed.">        return switch (contentType) {</span>
+<span class="fc" id="L143">            case &quot;image/jpeg&quot; -&gt; &quot;.jpg&quot;;</span>
+<span class="fc" id="L144">            case &quot;image/png&quot; -&gt; &quot;.png&quot;;</span>
+<span class="nc" id="L145">            case &quot;image/gif&quot; -&gt; &quot;.gif&quot;;</span>
+<span class="nc" id="L146">            case &quot;image/webp&quot; -&gt; &quot;.webp&quot;;</span>
+<span class="nc" id="L147">            default -&gt; &quot;.bin&quot;;</span>
+        };
+    }
+
+    private String contentTypeFor(String fileId) {
+<span class="fc" id="L152">        String lower = fileId.toLowerCase();</span>
+<span class="pc bpc" id="L153" title="1 of 2 branches missed.">        if (lower.endsWith(&quot;.png&quot;)) return &quot;image/png&quot;;</span>
+<span class="nc bnc" id="L154" title="All 2 branches missed.">        if (lower.endsWith(&quot;.gif&quot;)) return &quot;image/gif&quot;;</span>
+<span class="nc bnc" id="L155" title="All 2 branches missed.">        if (lower.endsWith(&quot;.webp&quot;)) return &quot;image/webp&quot;;</span>
+<span class="nc" id="L156">        return &quot;image/jpeg&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

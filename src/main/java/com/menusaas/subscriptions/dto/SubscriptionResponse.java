@@ -7,6 +7,8 @@ public record SubscriptionResponse(
         Long restaurantId,
         PlanResponse plan,
         String status,
+        String provider,
+        String providerReference,
         Instant startsAt,
         Instant endsAt
 ) {

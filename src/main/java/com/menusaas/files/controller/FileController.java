@@ -1,5 +1,6 @@
 package com.menusaas.files.controller;
 
+import com.menusaas.files.security.SignedUrlService;
 import com.menusaas.files.service.FileStorageService;
 import com.menusaas.shared.api.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,12 +19,16 @@ import java.util.Map;
 public class FileController {
 
     private final FileStorageService fileStorageService;
+    private final SignedUrlService signedUrlService;
 
-    @Operation(summary = "Subir una imagen y obtener su URL")
+    @Operation(summary = "Subir una imagen y obtener su URL firmada")
     @PostMapping("/upload")
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<Map<String, String>> upload(@RequestParam("file") MultipartFile file) {
-        String url = fileStorageService.store(file);
-        return ApiResponse.ok("Imagen subida", Map.of("url", url));
+        String fileId = fileStorageService.store(file);
+        return ApiResponse.ok("Imagen subida", Map.of(
+                "url", signedUrlService.buildSignedUrl(fileId),
+                "fileId", fileId
+        ));
     }
 }

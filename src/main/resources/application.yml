@@ -27,6 +27,8 @@ server:
 
 app:
   jwt:
+    # El secreto SOLO tiene fallback en desarrollo (perfil por defecto).
+    # En producción (perfil "prod") es OBLIGATORIO vía variable de entorno.
     # Generar con: openssl rand -base64 64
     secret: ${JWT_SECRET:Y2hhbmdlLW1lLWxvY2FsLW1lbnUtc2Fhcy1qd3Qtc2VjcmV0LXNlY3JldC1kZW1vLTIwMjYtMDgtMTg=}
     access-token-ttl-minutes: ${JWT_ACCESS_TTL:15}
@@ -34,7 +36,16 @@ app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://localhost:8080}
   app-base-url: ${APP_BASE_URL:http://localhost:4200}
+  api-base-url: ${API_BASE_URL:http://localhost:8080}
   upload-dir: ${UPLOAD_DIR:./uploads}
+  security:
+    cookies-secure: ${COOKIES_SECURE:false}
+    signed-url-ttl-seconds: ${SIGNED_URL_TTL:3600}
+  payments:
+    # Pasarela de pagos (Stripe). Si no se configuran las claves, el sistema
+    # opera en modo manual (solo desarrollo/pruebas).
+    stripe-secret-key: ${STRIPE_SECRET_KEY:}
+    stripe-webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
 
 springdoc:
   swagger-ui:

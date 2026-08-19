@@ -8,10 +8,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @Tag(name = "Categories", description = "Categorías del menú (siempre del restaurante del JWT)")
 @RestController
@@ -21,10 +22,13 @@ public class CategoryController {
 
     private final CategoryService categoryService;
 
-    @Operation(summary = "Listar mis categorías")
+    @Operation(summary = "Listar mis categorías con paginación")
     @GetMapping
-    public ApiResponse<List<CategoryResponse>> list() {
-        return ApiResponse.ok(categoryService.listMine());
+    public ApiResponse<Page<CategoryResponse>> list(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        return ApiResponse.ok(categoryService.listMine(
+                PageRequest.of(page, Math.min(size, 100), Sort.by(Sort.Direction.ASC, "position"))));
     }
 
     @Operation(summary = "Obtener una categoría")

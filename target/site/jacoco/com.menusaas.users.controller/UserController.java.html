@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">menu-saas-backend</a> &gt; <a href="index.source.html" class="el_package">com.menusaas.users.controller</a> &gt; <span class="el_source">UserController.java</span></div><h1>UserController.java</h1><pre class="source lang-java linenums">package com.menusaas.users.controller;
+
+import com.menusaas.shared.api.ApiResponse;
+import com.menusaas.users.dto.CreateUserRequest;
+import com.menusaas.users.dto.UserResponse;
+import com.menusaas.users.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@Tag(name = &quot;Users&quot;, description = &quot;Usuarios del restaurante (tenant-scoped)&quot;)
+@RestController
+@RequestMapping(&quot;/api/users&quot;)
+@RequiredArgsConstructor
+public class UserController {
+
+    private final UserService userService;
+
+    @Operation(summary = &quot;Listar usuarios de mi restaurante&quot;)
+    @GetMapping
+    public ApiResponse&lt;List&lt;UserResponse&gt;&gt; list() {
+<span class="nc" id="L27">        return ApiResponse.ok(userService.listMine());</span>
+    }
+
+    @Operation(summary = &quot;Obtener un usuario de mi restaurante&quot;)
+    @GetMapping(&quot;/{id}&quot;)
+    public ApiResponse&lt;UserResponse&gt; get(@PathVariable Long id) {
+<span class="nc" id="L33">        return ApiResponse.ok(userService.getMine(id));</span>
+    }
+
+    @Operation(summary = &quot;Crear usuario (solo RESTAURANT_ADMIN)&quot;)
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse&lt;UserResponse&gt; create(@Valid @RequestBody CreateUserRequest request) {
+<span class="nc" id="L40">        return ApiResponse.ok(&quot;Usuario creado&quot;, userService.createMine(request));</span>
+    }
+
+    @Operation(summary = &quot;Activar/desactivar usuario (solo RESTAURANT_ADMIN)&quot;)
+    @PatchMapping(&quot;/{id}/active&quot;)
+    public ApiResponse&lt;Void&gt; setActive(@PathVariable Long id, @RequestParam boolean active) {
+<span class="nc" id="L46">        userService.toggleActiveMine(id, active);</span>
+<span class="nc bnc" id="L47" title="All 2 branches missed.">        return ApiResponse.ok(active ? &quot;Usuario activado&quot; : &quot;Usuario desactivado&quot;);</span>
+    }
+
+    @Operation(summary = &quot;Eliminar usuario (solo RESTAURANT_ADMIN)&quot;)
+    @DeleteMapping(&quot;/{id}&quot;)
+    public ApiResponse&lt;Void&gt; delete(@PathVariable Long id) {
+<span class="nc" id="L53">        userService.deleteMine(id);</span>
+<span class="nc" id="L54">        return ApiResponse.ok(&quot;Usuario eliminado&quot;);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

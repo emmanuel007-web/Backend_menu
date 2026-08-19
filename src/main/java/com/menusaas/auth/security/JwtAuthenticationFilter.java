@@ -16,7 +16,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 /**
- * Filtro JWT: extrae el Bearer token, valida firma/expiración y autentica al usuario.
+ * Filtro JWT: extrae el token del header Authorization (Bearer) o de la
+ * cookie HttpOnly "access_token", valida firma/expiración y autentica al usuario.
  */
 @Component
 @RequiredArgsConstructor
@@ -26,18 +27,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final CustomUserDetailsService userDetailsService;
+    private final CookieService cookieService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
 
-        String header = request.getHeader("Authorization");
-        if (header == null || !header.startsWith(BEARER_PREFIX) || SecurityContextHolder.getContext().getAuthentication() != null) {
+        String token = resolveToken(request);
+        if (token == null || SecurityContextHolder.getContext().getAuthentication() != null) {
             chain.doFilter(request, response);
             return;
         }
 
-        String token = header.substring(BEARER_PREFIX.length());
         try {
             Long userId = jwtService.parse(token).get("uid", Long.class);
             UserDetails userDetails = userDetailsService.loadById(userId);
@@ -57,5 +58,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         chain.doFilter(request, response);
+    }
+
+    private String resolveToken(HttpServletRequest request) {
+        String header = request.getHeader("Authorization");
+        if (header != null && header.startsWith(BEARER_PREFIX)) {
+            return header.substring(BEARER_PREFIX.length());
+        }
+        return cookieService.readAccessToken(request);
     }
 }

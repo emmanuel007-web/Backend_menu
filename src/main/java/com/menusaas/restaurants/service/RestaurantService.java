@@ -1,5 +1,6 @@
 package com.menusaas.restaurants.service;
 
+import com.menusaas.files.security.SignedUrlService;
 import com.menusaas.restaurants.dto.RestaurantRequest;
 import com.menusaas.restaurants.dto.RestaurantResponse;
 import com.menusaas.restaurants.entity.Restaurant;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class RestaurantService {
 
     private final RestaurantRepository restaurantRepository;
+    private final SignedUrlService signedUrlService;
 
     /**
      * Un usuario RESTAURANT_* solo puede acceder a SU restaurante (tenant del JWT).
@@ -89,7 +91,7 @@ public class RestaurantService {
 
     private RestaurantResponse toResponse(Restaurant r) {
         return new RestaurantResponse(
-                r.getId(), r.getName(), r.getSlug(), r.getLogoUrl(), r.getDescription(),
+                r.getId(), r.getName(), r.getSlug(), signedUrlService.toSignedUrlOrNull(r.getLogoUrl()), r.getDescription(),
                 r.getPhone(), r.getAddress(), r.getWhatsapp(), r.getInstagram(), r.getFacebook(),
                 r.isActive(), r.getCreatedAt(), r.getUpdatedAt()
         );

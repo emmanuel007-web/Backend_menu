@@ -13,13 +13,19 @@ public record AppProperties(
         Jwt jwt,
         Cors cors,
         String appBaseUrl,
-        String uploadDir
+        String apiBaseUrl,
+        String uploadDir,
+        Security security,
+        Payments payments
 ) {
 
     public AppProperties {
         if (appBaseUrl == null) appBaseUrl = "http://localhost:4200";
+        if (apiBaseUrl == null) apiBaseUrl = "http://localhost:8080";
         if (uploadDir == null) uploadDir = "./uploads";
         if (cors == null) cors = new Cors(new ArrayList<>());
+        if (security == null) security = new Security(false, 3600);
+        if (payments == null) payments = new Payments(null, null);
     }
 
     public record Jwt(
@@ -41,5 +47,21 @@ public record AppProperties(
         public List<String> allowedOrigins() {
             return allowedOrigins == null ? List.of() : List.copyOf(allowedOrigins);
         }
+    }
+
+    /**
+     * cookiesSecure: cookies HttpOnly/SameSite con flag Secure (obligatorio en HTTPS).
+     * signedUrlTtlSeconds: tiempo de vida de las URLs firmadas de imágenes.
+     */
+    public record Security(boolean cookiesSecure, long signedUrlTtlSeconds) {
+        public Security {
+            if (signedUrlTtlSeconds <= 0) signedUrlTtlSeconds = 3600;
+        }
+    }
+
+    /**
+     * Stripe: si las claves están vacías, la pasarela opera en modo manual (solo dev).
+     */
+    public record Payments(String stripeSecretKey, String stripeWebhookSecret) {
     }
 }

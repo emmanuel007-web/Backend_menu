@@ -2,6 +2,7 @@ package com.menusaas.subscriptions.controller;
 
 import com.menusaas.shared.api.ApiResponse;
 import com.menusaas.subscriptions.dto.PlanResponse;
+import com.menusaas.subscriptions.dto.SubscribeResult;
 import com.menusaas.subscriptions.dto.SubscriptionRequest;
 import com.menusaas.subscriptions.dto.SubscriptionResponse;
 import com.menusaas.subscriptions.service.SubscriptionService;
@@ -13,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "Subscriptions", description = "Planes y suscripción del restaurante (gestión manual en el MVP)")
+@Tag(name = "Subscriptions", description = "Planes y suscripción del restaurante (ciclo de vida completo)")
 @RestController
 @RequestMapping("/api/subscriptions")
 @RequiredArgsConstructor
@@ -33,9 +34,15 @@ public class SubscriptionController {
         return ApiResponse.ok(subscriptionService.getMySubscription());
     }
 
-    @Operation(summary = "Suscribirse a un plan (por código)")
+    @Operation(summary = "Suscribirse/cambiar a un plan (redirige a la pasarela si está configurada)")
     @PostMapping("/subscribe")
-    public ApiResponse<SubscriptionResponse> subscribe(@Valid @RequestBody SubscriptionRequest request) {
-        return ApiResponse.ok("Suscripción activada", subscriptionService.subscribe(request));
+    public ApiResponse<SubscribeResult> subscribe(@Valid @RequestBody SubscriptionRequest request) {
+        return ApiResponse.ok("Suscripción procesada", subscriptionService.subscribe(request));
+    }
+
+    @Operation(summary = "Cancelar la suscripción activa")
+    @PostMapping("/cancel")
+    public ApiResponse<SubscriptionResponse> cancel() {
+        return ApiResponse.ok("Suscripción cancelada", subscriptionService.cancelMySubscription());
     }
 }

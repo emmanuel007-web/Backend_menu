@@ -8,10 +8,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @Tag(name = "Products", description = "Productos del menú (siempre del restaurante del JWT)")
 @RestController
@@ -21,10 +22,14 @@ public class ProductController {
 
     private final ProductService productService;
 
-    @Operation(summary = "Listar mis productos (opcional: filtrar por categoría)")
+    @Operation(summary = "Listar mis productos con paginación (opcional: filtrar por categoría)")
     @GetMapping
-    public ApiResponse<List<ProductResponse>> list(@RequestParam(required = false) Long categoryId) {
-        return ApiResponse.ok(productService.listMine(categoryId));
+    public ApiResponse<Page<ProductResponse>> list(
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        return ApiResponse.ok(productService.listMine(categoryId,
+                PageRequest.of(page, Math.min(size, 100), Sort.by(Sort.Direction.ASC, "position"))));
     }
 
     @Operation(summary = "Obtener un producto")

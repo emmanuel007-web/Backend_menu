@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">menu-saas-backend</a> &gt; <a href="index.source.html" class="el_package">com.menusaas.auth.service</a> &gt; <span class="el_source">AuthService.java</span></div><h1>AuthService.java</h1><pre class="source lang-java linenums">package com.menusaas.auth.service;
+
+import com.menusaas.auth.dto.AuthResponse;
+import com.menusaas.auth.dto.LoginRequest;
+import com.menusaas.auth.dto.RegisterRequest;
+import com.menusaas.auth.security.JwtService;
+import com.menusaas.auth.security.RefreshToken;
+import com.menusaas.auth.security.RefreshTokenRepository;
+import com.menusaas.auth.security.UserPrincipal;
+import com.menusaas.restaurants.entity.Restaurant;
+import com.menusaas.restaurants.repository.RestaurantRepository;
+import com.menusaas.shared.api.BadRequestException;
+import com.menusaas.shared.api.ConflictException;
+import com.menusaas.shared.api.ForbiddenException;
+import com.menusaas.shared.api.ResourceNotFoundException;
+import com.menusaas.shared.security.SecurityUtils;
+import com.menusaas.users.entity.Role;
+import com.menusaas.users.entity.User;
+import com.menusaas.users.repository.RoleRepository;
+import com.menusaas.users.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.util.UUID;
+
+<span class="fc" id="L32">@Slf4j</span>
+@Service
+@RequiredArgsConstructor
+public class AuthService {
+
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final RestaurantRepository restaurantRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
+    private final AuthenticationManager authenticationManager;
+
+    /**
+     * Resultado interno: los tokens se entregan al controlador para
+     * escribirlos como cookies HttpOnly (nunca llegan al cuerpo JSON).
+     */
+<span class="fc" id="L49">    public record AuthResult(String accessToken, String refreshToken, AuthResponse.UserInfo user) {</span>
+    }
+
+    @Transactional
+    public AuthResult register(RegisterRequest request) {
+<span class="fc" id="L54">        String email = normalizeEmail(request.email());</span>
+
+<span class="fc bfc" id="L56" title="All 2 branches covered.">        if (userRepository.existsByEmail(email)) {</span>
+<span class="fc" id="L57">            throw new ConflictException(&quot;Ya existe una cuenta con este correo&quot;);</span>
+        }
+<span class="fc bfc" id="L59" title="All 2 branches covered.">        if (restaurantRepository.existsBySlug(request.slug())) {</span>
+<span class="fc" id="L60">            throw new ConflictException(&quot;El slug '&quot; + request.slug() + &quot;' ya está en uso&quot;);</span>
+        }
+
+<span class="fc" id="L63">        Role role = roleRepository.findByName(Role.RESTAURANT_ADMIN)</span>
+<span class="pc" id="L64">                .orElseThrow(() -&gt; new IllegalStateException(&quot;Rol RESTAURANT_ADMIN no configurado&quot;));</span>
+
+<span class="fc" id="L66">        Restaurant restaurant = Restaurant.builder()</span>
+<span class="fc" id="L67">                .name(request.restaurantName().trim())</span>
+<span class="fc" id="L68">                .slug(request.slug())</span>
+<span class="fc" id="L69">                .active(true)</span>
+<span class="fc" id="L70">                .build();</span>
+<span class="fc" id="L71">        restaurant = restaurantRepository.save(restaurant);</span>
+
+<span class="fc" id="L73">        User user = User.builder()</span>
+<span class="fc" id="L74">                .name(request.name().trim())</span>
+<span class="fc" id="L75">                .email(email)</span>
+<span class="fc" id="L76">                .password(passwordEncoder.encode(request.password()))</span>
+<span class="fc" id="L77">                .role(role)</span>
+<span class="fc" id="L78">                .restaurant(restaurant)</span>
+<span class="fc" id="L79">                .active(true)</span>
+<span class="fc" id="L80">                .build();</span>
+<span class="fc" id="L81">        user = userRepository.save(user);</span>
+
+<span class="fc" id="L83">        log.info(&quot;Nuevo restaurante registrado: slug={}, usuario={}&quot;, restaurant.getSlug(), email);</span>
+<span class="fc" id="L84">        return buildAuthResult(user);</span>
+    }
+
+    @Transactional
+    public AuthResult login(LoginRequest request) {
+<span class="fc" id="L89">        authenticationManager.authenticate(</span>
+<span class="fc" id="L90">                new UsernamePasswordAuthenticationToken(normalizeEmail(request.email()), request.password()));</span>
+
+<span class="fc" id="L92">        User user = userRepository.findByEmail(normalizeEmail(request.email()))</span>
+<span class="pc" id="L93">                .orElseThrow(() -&gt; new BadRequestException(&quot;Credenciales inválidas&quot;));</span>
+
+<span class="pc bpc" id="L95" title="1 of 2 branches missed.">        if (!user.isActive()) {</span>
+<span class="nc" id="L96">            throw new ForbiddenException(&quot;La cuenta está desactivada&quot;);</span>
+        }
+<span class="fc" id="L98">        return buildAuthResult(user);</span>
+    }
+
+    @Transactional
+    public AuthResult refresh(String refreshToken) {
+<span class="fc" id="L103">        RefreshToken stored = refreshTokenRepository.findByToken(refreshToken)</span>
+<span class="fc bfc" id="L104" title="All 2 branches covered.">                .filter(t -&gt; !t.isRevoked())</span>
+<span class="fc" id="L105">                .filter(t -&gt; t.getExpiresAt().isAfter(Instant.now()))</span>
+<span class="fc" id="L106">                .orElseThrow(() -&gt; new BadRequestException(&quot;Sesión expirada, inicie sesión nuevamente&quot;));</span>
+
+<span class="fc" id="L108">        User user = userRepository.findById(stored.getUserId())</span>
+<span class="pc" id="L109">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Usuario no encontrado&quot;));</span>
+
+<span class="pc bpc" id="L111" title="1 of 2 branches missed.">        if (!user.isActive()) {</span>
+<span class="nc" id="L112">            throw new ForbiddenException(&quot;La cuenta está desactivada&quot;);</span>
+        }
+
+        // Rotación: el refresh token usado se revoca y se emite uno nuevo.
+<span class="fc" id="L116">        stored.setRevoked(true);</span>
+<span class="fc" id="L117">        refreshTokenRepository.save(stored);</span>
+
+<span class="fc" id="L119">        return buildAuthResult(user);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public AuthResponse.UserInfo currentUserInfo() {
+<span class="fc" id="L124">        Long userId = SecurityUtils.currentUser().getId();</span>
+<span class="fc" id="L125">        User user = userRepository.findById(userId)</span>
+<span class="pc" id="L126">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Usuario no encontrado&quot;));</span>
+<span class="fc" id="L127">        return new AuthResponse.UserInfo(</span>
+<span class="fc" id="L128">                user.getId(),</span>
+<span class="fc" id="L129">                user.getName(),</span>
+<span class="fc" id="L130">                user.getEmail(),</span>
+<span class="fc" id="L131">                user.getRole().getName(),</span>
+<span class="pc bpc" id="L132" title="1 of 2 branches missed.">                user.getRestaurant() != null ? user.getRestaurant().getId() : null</span>
+        );
+    }
+
+    @Transactional
+    public void logout(String refreshToken) {
+<span class="pc bpc" id="L138" title="2 of 4 branches missed.">        if (refreshToken == null || refreshToken.isBlank()) {</span>
+<span class="nc" id="L139">            return;</span>
+        }
+<span class="fc" id="L141">        refreshTokenRepository.findByToken(refreshToken)</span>
+<span class="fc" id="L142">                .ifPresent(stored -&gt; {</span>
+<span class="fc" id="L143">                    stored.setRevoked(true);</span>
+<span class="fc" id="L144">                    refreshTokenRepository.save(stored);</span>
+<span class="fc" id="L145">                });</span>
+<span class="fc" id="L146">    }</span>
+
+    @Transactional
+    public void logoutAll(Long userId) {
+<span class="nc" id="L150">        refreshTokenRepository.deleteByUserId(userId);</span>
+<span class="nc" id="L151">    }</span>
+
+    private AuthResult buildAuthResult(User user) {
+<span class="fc" id="L154">        String accessToken = jwtService.generateAccessToken(user);</span>
+<span class="fc" id="L155">        String refreshToken = jwtService.generateRefreshToken(user);</span>
+
+<span class="fc" id="L157">        refreshTokenRepository.save(RefreshToken.builder()</span>
+<span class="fc" id="L158">                .userId(user.getId())</span>
+<span class="fc" id="L159">                .token(refreshToken)</span>
+<span class="fc" id="L160">                .expiresAt(jwtService.refreshTokenExpiry())</span>
+<span class="fc" id="L161">                .revoked(false)</span>
+<span class="fc" id="L162">                .build());</span>
+
+<span class="fc" id="L164">        AuthResponse.UserInfo userInfo = new AuthResponse.UserInfo(</span>
+<span class="fc" id="L165">                user.getId(),</span>
+<span class="fc" id="L166">                user.getName(),</span>
+<span class="fc" id="L167">                user.getEmail(),</span>
+<span class="fc" id="L168">                user.getRole().getName(),</span>
+<span class="pc bpc" id="L169" title="1 of 2 branches missed.">                user.getRestaurant() != null ? user.getRestaurant().getId() : null</span>
+        );
+<span class="fc" id="L171">        return new AuthResult(accessToken, refreshToken, userInfo);</span>
+    }
+
+    private String normalizeEmail(String email) {
+<span class="fc" id="L175">        return email.trim().toLowerCase();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

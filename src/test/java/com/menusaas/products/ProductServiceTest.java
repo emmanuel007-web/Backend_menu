@@ -1,6 +1,7 @@
 package com.menusaas.products;
 
 import com.menusaas.categories.repository.CategoryRepository;
+import com.menusaas.files.security.SignedUrlService;
 import com.menusaas.products.dto.ProductRequest;
 import com.menusaas.products.entity.Product;
 import com.menusaas.products.repository.ProductRepository;
@@ -31,11 +32,14 @@ class ProductServiceTest {
     @Mock
     private CategoryRepository categoryRepository;
 
+    @Mock
+    private SignedUrlService signedUrlService;
+
     private ProductService productService;
 
     @BeforeEach
     void setUp() {
-        productService = new ProductService(productRepository, categoryRepository);
+        productService = new ProductService(productRepository, categoryRepository, signedUrlService);
     }
 
     @Test

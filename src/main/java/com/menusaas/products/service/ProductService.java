@@ -1,6 +1,7 @@
 package com.menusaas.products.service;
 
 import com.menusaas.categories.repository.CategoryRepository;
+import com.menusaas.files.security.SignedUrlService;
 import com.menusaas.products.dto.ProductRequest;
 import com.menusaas.products.dto.ProductResponse;
 import com.menusaas.products.entity.Product;
@@ -8,10 +9,10 @@ import com.menusaas.products.repository.ProductRepository;
 import com.menusaas.shared.api.ResourceNotFoundException;
 import com.menusaas.shared.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -19,14 +20,15 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final SignedUrlService signedUrlService;
 
     @Transactional(readOnly = true)
-    public List<ProductResponse> listMine(Long categoryId) {
+    public Page<ProductResponse> listMine(Long categoryId, Pageable pageable) {
         Long restaurantId = SecurityUtils.currentRestaurantId();
-        List<Product> products = categoryId != null
-                ? productRepository.findByCategoryIdAndRestaurantIdOrderByPositionAsc(categoryId, restaurantId)
-                : productRepository.findByRestaurantIdOrderByPositionAsc(restaurantId);
-        return products.stream().map(this::toResponse).toList();
+        Page<Product> products = categoryId != null
+                ? productRepository.findByCategoryIdAndRestaurantIdOrderByPositionAsc(categoryId, restaurantId, pageable)
+                : productRepository.findByRestaurantIdOrderByPositionAsc(restaurantId, pageable);
+        return products.map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
@@ -91,7 +93,7 @@ public class ProductService {
     private ProductResponse toResponse(Product p) {
         return new ProductResponse(
                 p.getId(), p.getRestaurantId(), p.getCategoryId(), p.getName(), p.getDescription(),
-                p.getPrice(), p.getImageUrl(), p.isAvailable(), p.getPosition(),
+                p.getPrice(), signedUrlService.toSignedUrlOrNull(p.getImageUrl()), p.isAvailable(), p.getPosition(),
                 p.getCreatedAt(), p.getUpdatedAt()
         );
     }

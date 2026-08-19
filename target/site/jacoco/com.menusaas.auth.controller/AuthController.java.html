@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">menu-saas-backend</a> &gt; <a href="index.source.html" class="el_package">com.menusaas.auth.controller</a> &gt; <span class="el_source">AuthController.java</span></div><h1>AuthController.java</h1><pre class="source lang-java linenums">package com.menusaas.auth.controller;
+
+import com.menusaas.auth.dto.AuthResponse;
+import com.menusaas.auth.dto.LoginRequest;
+import com.menusaas.auth.dto.RegisterRequest;
+import com.menusaas.auth.security.CookieService;
+import com.menusaas.auth.service.AuthService;
+import com.menusaas.shared.api.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.web.bind.annotation.*;
+
+@Tag(name = &quot;Auth&quot;, description = &quot;Registro, login, refresh y logout (tokens en cookies HttpOnly)&quot;)
+@RestController
+@RequestMapping(&quot;/api/auth&quot;)
+@RequiredArgsConstructor
+public class AuthController {
+
+    private final AuthService authService;
+    private final CookieService cookieService;
+
+    @Operation(summary = &quot;Registrar un nuevo restaurante + usuario administrador&quot;)
+    @PostMapping(&quot;/register&quot;)
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse&lt;AuthResponse&gt; register(@Valid @RequestBody RegisterRequest request,
+                                              HttpServletResponse response) {
+<span class="fc" id="L33">        AuthService.AuthResult result = authService.register(request);</span>
+<span class="fc" id="L34">        writeCookies(response, result);</span>
+<span class="fc" id="L35">        return ApiResponse.ok(&quot;Registro exitoso&quot;, new AuthResponse(result.user()));</span>
+    }
+
+    @Operation(summary = &quot;Iniciar sesión&quot;)
+    @PostMapping(&quot;/login&quot;)
+    public ApiResponse&lt;AuthResponse&gt; login(@Valid @RequestBody LoginRequest request,
+                                           HttpServletResponse response) {
+<span class="fc" id="L42">        AuthService.AuthResult result = authService.login(request);</span>
+<span class="fc" id="L43">        writeCookies(response, result);</span>
+<span class="fc" id="L44">        return ApiResponse.ok(&quot;Login exitoso&quot;, new AuthResponse(result.user()));</span>
+    }
+
+    @Operation(summary = &quot;Renovar tokens con la cookie refresh_token (rotación)&quot;)
+    @PostMapping(&quot;/refresh&quot;)
+    public ApiResponse&lt;AuthResponse&gt; refresh(HttpServletRequest request, HttpServletResponse response) {
+<span class="fc" id="L50">        AuthService.AuthResult result = authService.refresh(cookieService.readRefreshToken(request));</span>
+<span class="fc" id="L51">        writeCookies(response, result);</span>
+<span class="fc" id="L52">        return ApiResponse.ok(&quot;Tokens renovados&quot;, new AuthResponse(result.user()));</span>
+    }
+
+    @Operation(summary = &quot;Cerrar sesión (revoca el refresh token y limpia cookies)&quot;)
+    @PostMapping(&quot;/logout&quot;)
+    public ApiResponse&lt;Void&gt; logout(HttpServletRequest request, HttpServletResponse response) {
+<span class="fc" id="L58">        authService.logout(cookieService.readRefreshToken(request));</span>
+<span class="fc" id="L59">        cookieService.clearTokens(request, response);</span>
+<span class="fc" id="L60">        return ApiResponse.ok(&quot;Sesión cerrada&quot;);</span>
+    }
+
+    @Operation(summary = &quot;Revocar todos los refresh tokens del usuario autenticado&quot;)
+    @PostMapping(&quot;/logout-all&quot;)
+    public ApiResponse&lt;Void&gt; logoutAll() {
+<span class="nc" id="L66">        authService.logoutAll(com.menusaas.shared.security.SecurityUtils.currentUser().getId());</span>
+<span class="nc" id="L67">        return ApiResponse.ok(&quot;Todas las sesiones cerradas&quot;);</span>
+    }
+
+    @Operation(summary = &quot;Perfil del usuario autenticado (restaurar sesión al recargar)&quot;)
+    @GetMapping(&quot;/me&quot;)
+    public ApiResponse&lt;AuthResponse.UserInfo&gt; me() {
+<span class="fc" id="L73">        return ApiResponse.ok(authService.currentUserInfo());</span>
+    }
+
+    @Operation(summary = &quot;Token CSRF para el bootstrap del frontend (cookie XSRF-TOKEN)&quot;)
+    @GetMapping(&quot;/csrf&quot;)
+    public ApiResponse&lt;String&gt; csrf(HttpServletRequest request) {
+<span class="fc" id="L79">        CsrfToken token = (CsrfToken) request.getAttribute(CsrfToken.class.getName());</span>
+<span class="pc bpc" id="L80" title="1 of 2 branches missed.">        return ApiResponse.ok(&quot;OK&quot;, token != null ? token.getToken() : &quot;&quot;);</span>
+    }
+
+    private void writeCookies(HttpServletResponse response, AuthService.AuthResult result) {
+<span class="fc" id="L84">        cookieService.setAccessToken(response, result.accessToken());</span>
+<span class="fc" id="L85">        cookieService.setRefreshToken(response, result.refreshToken());</span>
+<span class="fc" id="L86">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

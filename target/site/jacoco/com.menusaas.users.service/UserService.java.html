@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">menu-saas-backend</a> &gt; <a href="index.source.html" class="el_package">com.menusaas.users.service</a> &gt; <span class="el_source">UserService.java</span></div><h1>UserService.java</h1><pre class="source lang-java linenums">package com.menusaas.users.service;
+
+import com.menusaas.restaurants.repository.RestaurantRepository;
+import com.menusaas.shared.api.ConflictException;
+import com.menusaas.shared.api.ForbiddenException;
+import com.menusaas.shared.api.ResourceNotFoundException;
+import com.menusaas.shared.security.SecurityUtils;
+import com.menusaas.users.dto.CreateUserRequest;
+import com.menusaas.users.dto.UserResponse;
+import com.menusaas.users.entity.Role;
+import com.menusaas.users.entity.User;
+import com.menusaas.users.repository.RoleRepository;
+import com.menusaas.users.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class UserService {
+
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final RestaurantRepository restaurantRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    @Transactional(readOnly = true)
+    public List&lt;UserResponse&gt; listMine() {
+<span class="fc" id="L32">        Long restaurantId = SecurityUtils.currentRestaurantId();</span>
+<span class="fc" id="L33">        return userRepository.findByRestaurantId(restaurantId, null)</span>
+<span class="fc" id="L34">                .stream()</span>
+<span class="fc" id="L35">                .map(UserResponse::from)</span>
+<span class="fc" id="L36">                .toList();</span>
+    }
+
+    @Transactional(readOnly = true)
+    public UserResponse getMine(Long id) {
+<span class="nc" id="L41">        return UserResponse.from(findScoped(id));</span>
+    }
+
+    @Transactional
+    public UserResponse createMine(CreateUserRequest request) {
+<span class="fc" id="L46">        Long restaurantId = SecurityUtils.currentRestaurantId();</span>
+<span class="fc" id="L47">        String email = request.email().trim().toLowerCase();</span>
+
+<span class="fc bfc" id="L49" title="All 2 branches covered.">        if (userRepository.existsByEmail(email)) {</span>
+<span class="fc" id="L50">            throw new ConflictException(&quot;Ya existe un usuario con ese correo&quot;);</span>
+        }
+<span class="fc" id="L52">        requireAdmin();</span>
+
+<span class="pc bpc" id="L54" title="1 of 2 branches missed.">        String roleName = request.role() != null ? request.role() : Role.RESTAURANT_USER;</span>
+<span class="fc" id="L55">        Role role = roleRepository.findByName(roleName)</span>
+<span class="pc" id="L56">                .orElseThrow(() -&gt; new IllegalStateException(&quot;Rol no configurado: &quot; + roleName));</span>
+
+<span class="fc" id="L58">        User user = User.builder()</span>
+<span class="fc" id="L59">                .name(request.name().trim())</span>
+<span class="fc" id="L60">                .email(email)</span>
+<span class="fc" id="L61">                .password(passwordEncoder.encode(request.password()))</span>
+<span class="fc" id="L62">                .role(role)</span>
+<span class="fc" id="L63">                .restaurant(restaurantRepository.getReferenceById(restaurantId))</span>
+<span class="fc" id="L64">                .active(true)</span>
+<span class="fc" id="L65">                .build();</span>
+<span class="fc" id="L66">        return UserResponse.from(userRepository.save(user));</span>
+    }
+
+    @Transactional
+    public void deleteMine(Long id) {
+<span class="fc" id="L71">        requireAdmin();</span>
+<span class="fc" id="L72">        User user = findScoped(id);</span>
+<span class="fc bfc" id="L73" title="All 2 branches covered.">        if (user.getId().equals(SecurityUtils.currentUser().getId())) {</span>
+<span class="fc" id="L74">            throw new ForbiddenException(&quot;No puede eliminarse a sí mismo&quot;);</span>
+        }
+<span class="fc" id="L76">        userRepository.delete(user);</span>
+<span class="fc" id="L77">    }</span>
+
+    @Transactional
+    public void toggleActiveMine(Long id, boolean active) {
+<span class="fc" id="L81">        requireAdmin();</span>
+<span class="fc" id="L82">        User user = findScoped(id);</span>
+<span class="pc bpc" id="L83" title="1 of 4 branches missed.">        if (user.getId().equals(SecurityUtils.currentUser().getId()) &amp;&amp; !active) {</span>
+<span class="fc" id="L84">            throw new ForbiddenException(&quot;No puede desactivarse a sí mismo&quot;);</span>
+        }
+<span class="fc" id="L86">        user.setActive(active);</span>
+<span class="fc" id="L87">        userRepository.save(user);</span>
+<span class="fc" id="L88">    }</span>
+
+    private User findScoped(Long id) {
+<span class="fc" id="L91">        return userRepository.findById(id)</span>
+<span class="pc bpc" id="L92" title="1 of 2 branches missed.">                .filter(u -&gt; u.getRestaurant() != null</span>
+<span class="fc bfc" id="L93" title="All 2 branches covered.">                        &amp;&amp; u.getRestaurant().getId().equals(SecurityUtils.currentRestaurantId()))</span>
+<span class="fc" id="L94">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Usuario no encontrado&quot;));</span>
+    }
+
+    private void requireAdmin() {
+<span class="fc" id="L98">        String role = SecurityUtils.currentUser().getRole();</span>
+<span class="pc bpc" id="L99" title="1 of 4 branches missed.">        if (!Role.RESTAURANT_ADMIN.equals(role) &amp;&amp; !Role.SUPER_ADMIN.equals(role)) {</span>
+<span class="fc" id="L100">            throw new ForbiddenException(&quot;Solo el administrador del restaurante puede gestionar usuarios&quot;);</span>
+        }
+<span class="fc" id="L102">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

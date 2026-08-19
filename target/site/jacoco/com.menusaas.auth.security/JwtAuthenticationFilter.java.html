@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JwtAuthenticationFilter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">menu-saas-backend</a> &gt; <a href="index.source.html" class="el_package">com.menusaas.auth.security</a> &gt; <span class="el_source">JwtAuthenticationFilter.java</span></div><h1>JwtAuthenticationFilter.java</h1><pre class="source lang-java linenums">package com.menusaas.auth.security;
+
+import io.jsonwebtoken.JwtException;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+
+/**
+ * Filtro JWT: extrae el token del header Authorization (Bearer) o de la
+ * cookie HttpOnly &quot;access_token&quot;, valida firma/expiración y autentica al usuario.
+ */
+@Component
+@RequiredArgsConstructor
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final String BEARER_PREFIX = &quot;Bearer &quot;;
+
+    private final JwtService jwtService;
+    private final CustomUserDetailsService userDetailsService;
+    private final CookieService cookieService;
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws ServletException, IOException {
+
+<span class="fc" id="L36">        String token = resolveToken(request);</span>
+<span class="pc bpc" id="L37" title="1 of 4 branches missed.">        if (token == null || SecurityContextHolder.getContext().getAuthentication() != null) {</span>
+<span class="fc" id="L38">            chain.doFilter(request, response);</span>
+<span class="fc" id="L39">            return;</span>
+        }
+
+        try {
+<span class="fc" id="L43">            Long userId = jwtService.parse(token).get(&quot;uid&quot;, Long.class);</span>
+<span class="fc" id="L44">            UserDetails userDetails = userDetailsService.loadById(userId);</span>
+
+<span class="pc bpc" id="L46" title="1 of 2 branches missed.">            if (!userDetails.isEnabled()) {</span>
+<span class="nc" id="L47">                chain.doFilter(request, response);</span>
+<span class="nc" id="L48">                return;</span>
+            }
+
+<span class="fc" id="L51">            UsernamePasswordAuthenticationToken authentication =</span>
+<span class="fc" id="L52">                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());</span>
+<span class="fc" id="L53">            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));</span>
+<span class="fc" id="L54">            SecurityContextHolder.getContext().setAuthentication(authentication);</span>
+<span class="nc" id="L55">        } catch (JwtException | IllegalArgumentException ex) {</span>
+            // Token inválido/vencido: se deja pasar sin autenticar; las rutas protegidas responderán 401.
+<span class="nc" id="L57">            SecurityContextHolder.clearContext();</span>
+<span class="fc" id="L58">        }</span>
+
+<span class="fc" id="L60">        chain.doFilter(request, response);</span>
+<span class="fc" id="L61">    }</span>
+
+    private String resolveToken(HttpServletRequest request) {
+<span class="fc" id="L64">        String header = request.getHeader(&quot;Authorization&quot;);</span>
+<span class="pc bpc" id="L65" title="3 of 4 branches missed.">        if (header != null &amp;&amp; header.startsWith(BEARER_PREFIX)) {</span>
+<span class="nc" id="L66">            return header.substring(BEARER_PREFIX.length());</span>
+        }
+<span class="fc" id="L68">        return cookieService.readAccessToken(request);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
