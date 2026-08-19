@@ -33,4 +33,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByCategoryScoped(@Param("categoryId") Long categoryId,
                                        @Param("restaurantId") Long restaurantId,
                                        @Param("onlyAvailable") boolean onlyAvailable);
+
+    long countByRestaurantId(Long restaurantId);
 }

@@ -17,4 +17,6 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     List<Subscription> findByStatusAndEndsAtBefore(String status, Instant before);
 
     Optional<Subscription> findByProviderReference(String providerReference);
+
+    long countByStatus(String status);
 }

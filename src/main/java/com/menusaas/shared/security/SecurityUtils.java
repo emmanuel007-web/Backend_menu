@@ -27,9 +27,6 @@ public final class SecurityUtils {
     public static Long currentRestaurantId() {
         Long restaurantId = currentUser().getRestaurantId();
         if (restaurantId == null) {
-            if (com.menusaas.users.entity.Role.SUPER_ADMIN.equals(currentUser().getRole())) {
-                return 1L;
-            }
             throw new ForbiddenException("El usuario no pertenece a un restaurante");
         }
         return restaurantId;

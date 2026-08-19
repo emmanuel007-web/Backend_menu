@@ -10,4 +10,8 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
     Optional<Restaurant> findBySlug(String slug);
 
     boolean existsBySlug(String slug);
+
+    long countByActive(boolean active);
+
+    java.util.List<Restaurant> findAllByOrderByIdDesc();
 }

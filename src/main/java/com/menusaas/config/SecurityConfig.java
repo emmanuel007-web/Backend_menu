@@ -51,9 +51,9 @@ public class SecurityConfig {
                         // el token CSRF debe permanecer estable entre peticiones.
                         .sessionAuthenticationStrategy((authentication, request, response) -> {
                         })
-                        // Endpoints que se autentican con credenciales propias o firma
+                        // Endpoints que se autentican con credenciales propias, pedidos públicos o firma
                         // criptográfica (webhook de Stripe).
-                        .ignoringRequestMatchers("/api/auth/login", "/api/auth/register", "/api/webhooks/**"))
+                        .ignoringRequestMatchers("/api/auth/login", "/api/auth/register", "/api/public/orders/**", "/api/webhooks/**"))
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
