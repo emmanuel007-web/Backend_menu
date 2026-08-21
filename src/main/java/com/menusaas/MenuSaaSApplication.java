@@ -12,7 +12,21 @@ public class MenuSaaSApplication {
 
     public static void main(String[] args) {
         normalizeDatabaseUrl();
+        validateUrlVar("APP_BASE_URL");
+        validateUrlVar("API_BASE_URL");
         SpringApplication.run(MenuSaaSApplication.class, args);
+    }
+
+    private static void validateUrlVar(String name) {
+        String value = System.getenv(name);
+        if (value == null || value.isBlank()) {
+            return;
+        }
+        if (!value.startsWith("http://") && !value.startsWith("https://")) {
+            throw new IllegalStateException(
+                    "La variable de entorno " + name + " debe ser una URL absoluta (https://...) pero su valor es \""
+                            + value + "\". Revisa la configuracion del servicio en Render.");
+        }
     }
 
     static void normalizeDatabaseUrl() {
