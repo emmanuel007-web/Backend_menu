@@ -29,7 +29,21 @@ public class JwtService {
 
     public JwtService(AppProperties appProperties) {
         this.jwtProps = appProperties.jwt();
-        this.key = Keys.hmacShaKeyFor(appProperties.jwt().secret().getBytes(StandardCharsets.UTF_8));
+        byte[] secretBytes = appProperties.jwt().secret().getBytes(StandardCharsets.UTF_8);
+        if (secretBytes.length < 32) {
+            this.key = deriveKey(secretBytes);
+        } else {
+            this.key = Keys.hmacShaKeyFor(secretBytes);
+        }
+    }
+
+    private static SecretKey deriveKey(byte[] secretBytes) {
+        try {
+            byte[] derived = java.security.MessageDigest.getInstance("SHA-256").digest(secretBytes);
+            return Keys.hmacShaKeyFor(derived);
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 no disponible", e);
+        }
     }
 
     public String generateAccessToken(User user) {
