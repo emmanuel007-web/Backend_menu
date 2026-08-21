@@ -3,18 +3,35 @@
 -- La API publica de Supabase (anon/authenticated) queda bloqueada:
 -- RLS activada sin politicas = denegar todo por defecto.
 
--- Supabase aplica statement/lock timeouts bajos por defecto en la conexion;
--- los elevamos para esta sesion: ALTER TABLE puede esperar tras otros arranques
--- solapados durante un redeploy.
+-- Supabase aplica timeouts bajos por defecto; los elevamos para esta sesion.
 SET statement_timeout = '120s';
-SET lock_timeout = '30s';
+SET lock_timeout = '10s';
 
+-- flyway_schema_history queda fuera: es metadata interna de Flyway, y su
+-- bloqueo durante redeploys solapados era la causa de fallos de migracion.
 DO $$
-DECLARE t record;
+DECLARE
+  t record;
+  attempts int;
 BEGIN
-  FOR t IN SELECT tablename FROM pg_tables WHERE schemaname = 'public'
+  FOR t IN SELECT tablename FROM pg_tables
+           WHERE schemaname = 'public'
+             AND tablename <> 'flyway_schema_history'
   LOOP
-    EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t.tablename);
+    attempts := 0;
+    LOOP
+      attempts := attempts + 1;
+      BEGIN
+        EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t.tablename);
+        EXIT;
+      EXCEPTION WHEN lock_not_available OR query_canceled THEN
+        IF attempts >= 6 THEN
+          RAISE NOTICE 'Tabla % sigue bloqueada tras % intentos', t.tablename, attempts;
+          RAISE;
+        END IF;
+        PERFORM pg_sleep(4);
+      END;
+    END LOOP;
   END LOOP;
 END $$;
 
