@@ -3,6 +3,12 @@
 -- La API publica de Supabase (anon/authenticated) queda bloqueada:
 -- RLS activada sin politicas = denegar todo por defecto.
 
+-- Supabase aplica statement/lock timeouts bajos por defecto en la conexion;
+-- los elevamos para esta sesion: ALTER TABLE puede esperar tras otros arranques
+-- solapados durante un redeploy.
+SET statement_timeout = '120s';
+SET lock_timeout = '30s';
+
 DO $$
 DECLARE t record;
 BEGIN
