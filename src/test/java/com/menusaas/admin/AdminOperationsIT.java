@@ -48,12 +48,12 @@ class AdminOperationsIT extends BaseIntegrationTest {
 
         // Crear restaurante con plan explícito → 201 y suscripción activa
         ResponseEntity<JsonNode> created = createRestaurant(superAdmin,
-                "Plan Libre", "plan-libre", "plan-libre-admin@test.com", "PlanLobre123!", "FREE");
+                "Plan Libre", "plan-libre", "plan-libre-admin@test.com", "PlanLobre123!", "NEGOCODE");
         assertThat(created.getStatusCode().value()).isEqualTo(201);
         JsonNode createdData = created.getBody().get("data");
         long restaurantId = createdData.get("id").asLong();
         assertThat(createdData.get("slug").asText()).isEqualTo("plan-libre");
-        assertThat(createdData.get("planName").asText()).isEqualTo("Gratis");
+        assertThat(createdData.get("planName").asText()).isEqualTo("Plan NegoCode");
         assertThat(createdData.get("adminEmail").asText()).isEqualTo("plan-libre-admin@test.com");
         assertThat(createdData.get("userCount").asLong()).isEqualTo(1);
 
@@ -61,7 +61,7 @@ class AdminOperationsIT extends BaseIntegrationTest {
         ResponseEntity<JsonNode> defaultPlan = createRestaurant(superAdmin,
                 "Plan Pro", "plan-pro", "plan-pro-admin@test.com", "PlanProAdmin123!", null);
         assertThat(defaultPlan.getStatusCode().value()).isEqualTo(201);
-        assertThat(defaultPlan.getBody().get("data").get("planName").asText()).isEqualTo("Profesional");
+        assertThat(defaultPlan.getBody().get("data").get("planName").asText()).isEqualTo("Plan NegoCode");
 
         // Crear con planCode inexistente → cae al primer plan disponible
         ResponseEntity<JsonNode> fallbackPlan = createRestaurant(superAdmin,
@@ -71,11 +71,11 @@ class AdminOperationsIT extends BaseIntegrationTest {
 
         // Conflictos: email duplicado → 409; slug duplicado → 409
         ResponseEntity<JsonNode> dupEmail = createRestaurant(superAdmin,
-                "Otro Nombre", "otro-slug", "plan-libre-admin@test.com", "PlanLobre123!", "PRO");
+                "Otro Nombre", "otro-slug", "plan-libre-admin@test.com", "PlanLobre123!", "NEGOCODE");
         assertThat(dupEmail.getStatusCode().value()).isEqualTo(409);
 
         ResponseEntity<JsonNode> dupSlug = createRestaurant(superAdmin,
-                "Otro Nombre", "plan-libre", "otro-email@test.com", "PlanLobre123!", "PRO");
+                "Otro Nombre", "plan-libre", "otro-email@test.com", "PlanLobre123!", "NEGOCODE");
         assertThat(dupSlug.getStatusCode().value()).isEqualTo(409);
 
         // Desactivar el restaurante creado → 200; reactivar → 200; inexistente → 404

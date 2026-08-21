@@ -39,15 +39,15 @@ class SubscriptionsIT extends BaseIntegrationTest {
         ResponseEntity<JsonNode> plans = rest.exchange("/api/subscriptions/plans", HttpMethod.GET,
                 session.get(), JsonNode.class);
         assertThat(plans.getStatusCode().is2xxSuccessful()).isTrue();
-        assertThat(plans.getBody().get("data").toString()).contains("PRO").contains("FREE");
+        assertThat(plans.getBody().get("data").toString()).contains("NEGOCODE");
 
         // Sin suscripción todavía → 404
         ResponseEntity<JsonNode> none = rest.exchange("/api/subscriptions/me", HttpMethod.GET,
                 session.get(), JsonNode.class);
         assertThat(none.getStatusCode().value()).isEqualTo(404);
 
-        // Suscribirse al plan PRO (modo manual → activa al instante, sin checkoutUrl)
-        ResponseEntity<JsonNode> subscribed = subscribe(session, "PRO");
+        // Suscribirse al plan NEGOCODE (modo manual → activa al instante, sin checkoutSessionId)
+        ResponseEntity<JsonNode> subscribed = subscribe(session, "NEGOCODE");
         assertThat(subscribed.getStatusCode().is2xxSuccessful()).isTrue();
         assertThat(subscribed.getBody().get("data").get("subscription").get("status").asText())
                 .isEqualTo("ACTIVE");
@@ -55,15 +55,10 @@ class SubscriptionsIT extends BaseIntegrationTest {
                 .isEqualTo("MANUAL");
         assertThat(subscribed.getBody().get("data").get("checkoutSessionId").isNull()).isTrue();
 
-        // Cambiar a FREE reemplaza la anterior (queda cancelada)
-        ResponseEntity<JsonNode> changed = subscribe(session, "FREE");
-        assertThat(changed.getStatusCode().is2xxSuccessful()).isTrue();
-        assertThat(changed.getBody().get("data").get("subscription").get("plan").get("code").asText())
-                .isEqualTo("FREE");
-
+        // La suscripción activa es visible en /me
         ResponseEntity<JsonNode> mine = rest.exchange("/api/subscriptions/me", HttpMethod.GET,
                 session.get(), JsonNode.class);
-        assertThat(mine.getBody().get("data").get("plan").get("code").asText()).isEqualTo("FREE");
+        assertThat(mine.getBody().get("data").get("plan").get("code").asText()).isEqualTo("NEGOCODE");
 
         // Plan inexistente → 404
         ResponseEntity<JsonNode> bad = subscribe(session, "NO_EXISTE");
