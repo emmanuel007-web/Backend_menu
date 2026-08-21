@@ -126,10 +126,10 @@ public class AdminService {
                 .build();
         userRepository.save(user);
 
-        // Plan inicial (PRO por defecto o el especificado)
+        // Plan inicial (NEGOCODE por defecto o el especificado)
         String planCode = (request.planCode() != null && !request.planCode().isBlank())
                 ? request.planCode()
-                : "PRO";
+                : "NEGOCODE";
 
         Plan plan = planRepository.findByCode(planCode)
                 .orElseGet(() -> planRepository.findAll().stream().findFirst().orElse(null));

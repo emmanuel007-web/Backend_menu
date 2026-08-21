@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Ciclo de vida de la suscripción en modo manual (sin pasarela configurada):
- * listar planes, suscribirse, cambiar de plan, cancelar. Sin Stripe, la
+ * listar planes, suscribirse, cambiar de plan, cancelar. Sin ePayco, la
  * suscripción queda activa de inmediato y sin URL de pago.
  */
 class SubscriptionsIT extends BaseIntegrationTest {
@@ -53,7 +53,7 @@ class SubscriptionsIT extends BaseIntegrationTest {
                 .isEqualTo("ACTIVE");
         assertThat(subscribed.getBody().get("data").get("subscription").get("provider").asText())
                 .isEqualTo("MANUAL");
-        assertThat(subscribed.getBody().get("data").get("checkoutUrl").isNull()).isTrue();
+        assertThat(subscribed.getBody().get("data").get("checkoutSessionId").isNull()).isTrue();
 
         // Cambiar a FREE reemplaza la anterior (queda cancelada)
         ResponseEntity<JsonNode> changed = subscribe(session, "FREE");
@@ -78,8 +78,8 @@ class SubscriptionsIT extends BaseIntegrationTest {
         // Webhook sin pasarela configurada → rechazado (firma criptográfica, no sesión)
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        ResponseEntity<JsonNode> webhook = rest.exchange("/api/webhooks/stripe", HttpMethod.POST,
-                new HttpEntity<>("{\"type\":\"checkout.session.completed\"}", headers), JsonNode.class);
+        ResponseEntity<JsonNode> webhook = rest.exchange("/api/webhooks/epayco", HttpMethod.POST,
+                new HttpEntity<>("{\"x_response\":\"Aceptada\",\"ref_payco\":\"ref123\"}", headers), JsonNode.class);
         assertThat(webhook.getStatusCode().value()).isEqualTo(400);
     }
 

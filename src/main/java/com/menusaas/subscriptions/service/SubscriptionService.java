@@ -24,7 +24,7 @@ import java.util.List;
 
 /**
  * Ciclo de vida de suscripciones:
- * - Suscribirse a un plan (vía pasarela Stripe, o directo en modo manual).
+ * - Suscribirse a un plan (vía pasarela ePayco, o directo en modo manual).
  * - Cancelación.
  * - Expiración automática (job por hora) cuando ends_at pasa.
  * - Activación/confirmación desde webhooks de la pasarela.
@@ -57,7 +57,7 @@ public class SubscriptionService {
 
     /**
      * Solicitud de suscripción/cambio de plan.
-     * - Con pasarela configurada: crea un Checkout de Stripe y deja la
+     * - Con pasarela configurada: crea una sesión de ePayco Smart Checkout y deja la
      *   suscripción en PENDING; se activa cuando llega el webhook.
      * - Sin pasarela (modo manual/dev): se activa al instante.
      */
@@ -76,7 +76,7 @@ public class SubscriptionService {
                             .planId(plan.getId())
                             .status(Subscription.STATUS_PENDING)
                             .provider(paymentGateway.isConfigured()
-                                    ? Subscription.PROVIDER_STRIPE
+                                    ? Subscription.PROVIDER_EPAYCO
                                     : Subscription.PROVIDER_MANUAL)
                             .startsAt(Instant.now())
                             .build();
@@ -86,14 +86,14 @@ public class SubscriptionService {
 
         if (paymentGateway.isConfigured()) {
             String base = appProperties.appBaseUrl();
+            String confirmationUrl = appProperties.apiBaseUrl() + "/api/webhooks/epayco";
+            String responseUrl = base + "/admin/settings?checkout=done";
             PaymentGateway.CheckoutSession session = paymentGateway.createCheckout(
-                    restaurantId, plan,
-                    base + "/admin/settings?checkout=success",
-                    base + "/admin/settings?checkout=cancelled");
-            pending.setProvider(Subscription.PROVIDER_STRIPE);
-            pending.setProviderReference(session.id());
+                    restaurantId, plan, confirmationUrl, responseUrl);
+            pending.setProvider(Subscription.PROVIDER_EPAYCO);
+            pending.setProviderReference(session.sessionId());
             subscriptionRepository.save(pending);
-            return new SubscribeResult(toResponse(pending), session.url());
+            return new SubscribeResult(toResponse(pending), session.sessionId());
         }
 
         // Modo manual (sin pasarela): activación inmediata.
@@ -135,7 +135,7 @@ public class SubscriptionService {
                 .restaurantId(restaurantId)
                 .planId(plan.getId())
                 .status(Subscription.STATUS_ACTIVE)
-                .provider(Subscription.PROVIDER_STRIPE)
+                .provider(Subscription.PROVIDER_EPAYCO)
                 .providerReference(providerReference)
                 .startsAt(Instant.now())
                 .endsAt(periodEnd)

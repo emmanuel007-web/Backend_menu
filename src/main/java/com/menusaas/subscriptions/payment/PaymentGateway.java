@@ -5,24 +5,25 @@ import com.menusaas.subscriptions.entity.Plan;
 import java.time.Instant;
 
 /**
- * Abstracción de pasarela de pago. Con STRIPE_SECRET_KEY configurado se usa
- * Stripe (Checkout + webhooks); sin claves se opera en modo manual (solo dev).
+ * Abstracción de pasarela de pago. Con EPAYCO_PUBLIC_KEY configurado se usa
+ * ePayco Smart Checkout v2; sin claves se opera en modo manual (solo dev).
  */
 public interface PaymentGateway {
 
     boolean isConfigured();
 
     /**
-     * Crea un checkout y devuelve la URL a la que redirigir al cliente.
+     * Crea una sesión de checkout y devuelve el sessionId + token para
+     * inicializar el Smart Checkout en el frontend.
      */
-    CheckoutSession createCheckout(Long restaurantId, Plan plan, String successUrl, String cancelUrl);
+    CheckoutSession createCheckout(Long restaurantId, Plan plan, String confirmationUrl, String responseUrl);
 
     /**
-     * Procesa un webhook firmado y devuelve el evento de pago resultante.
+     * Procesa un webhook de confirmación y devuelve el evento de pago resultante.
      */
-    PaymentEvent handleWebhook(String payload, String signatureHeader);
+    PaymentEvent handleWebhook(java.util.Map<String, String> params);
 
-    record CheckoutSession(String id, String url) {
+    record CheckoutSession(String sessionId, String token) {
     }
 
     record PaymentEvent(String type, String providerReference, Long restaurantId, String planCode, Instant periodEnd) {

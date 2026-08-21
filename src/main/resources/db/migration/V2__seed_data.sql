@@ -6,10 +6,7 @@ INSERT INTO roles (name, description) VALUES
     ('RESTAURANT_USER',   'Usuario operativo de un restaurante');
 
 INSERT INTO plans (code, name, description, price_monthly, active) VALUES
-    ('FREE',    'Gratis',     'Menú digital básico con QR', 0,        TRUE),
-    ('BASIC',   'Básico',     'Menú + 3 categorías extra',  14900,    TRUE),
-    ('PRO',     'Profesional','Menú + estadísticas',        29900,    TRUE),
-    ('PREMIUM', 'Premium',    'Todo incluido',              49900,    TRUE);
+    ('NEGOCODE', 'Plan NegoCode', 'Acceso total a la plataforma: menú digital ilimitado, código QR, recepción de pedidos en tiempo real y administración completa.', 49900, TRUE);
 
 INSERT INTO restaurants (name, slug, description, phone, address, whatsapp, instagram, facebook, active) VALUES
     ('Frito Mix', 'fritomix', 'Hamburguesas, combos y bebidas en el corazón de la ciudad',
@@ -25,7 +22,7 @@ INSERT INTO users (restaurant_id, name, email, password, role_id, active) VALUES
      (SELECT id FROM roles WHERE name = 'RESTAURANT_ADMIN'), TRUE);
 
 INSERT INTO subscriptions (restaurant_id, plan_id, status) VALUES
-    (1, (SELECT id FROM plans WHERE code = 'PRO'), 'ACTIVE');
+    (1, (SELECT id FROM plans WHERE code = 'NEGOCODE'), 'ACTIVE');
 
 INSERT INTO categories (restaurant_id, name, description, position) VALUES
     (1, 'Hamburguesas', 'Nuestras clásicas', 1),

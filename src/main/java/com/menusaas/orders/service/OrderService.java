@@ -31,7 +31,9 @@ public class OrderService {
 
     @Transactional
     public OrderResponse createPublicOrder(String slug, CreateOrderRequest request) {
-        Restaurant restaurant = restaurantRepository.findBySlug(slug.trim().toLowerCase())
+        // Lock pesimista en la fila del restaurante: dos pedidos concurrentes del
+        // mismo tenant se serializan aquí, evitando que count+1 genere duplicados.
+        Restaurant restaurant = restaurantRepository.findBySlugForUpdate(slug.trim().toLowerCase())
                 .filter(Restaurant::isActive)
                 .orElseThrow(() -> new ResourceNotFoundException("El menú digital no existe o no está disponible"));
 

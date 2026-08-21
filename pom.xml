@@ -105,12 +105,7 @@
             <version>${springdoc.version}</version>
         </dependency>
 
-        <!-- Pasarela de pagos: Stripe -->
-        <dependency>
-            <groupId>com.stripe</groupId>
-            <artifactId>stripe-java</artifactId>
-            <version>33.3.0</version>
-        </dependency>
+        <!-- spring-boot-starter-web ya incluye RestClient (Spring 6.1+) para ePayco API -->
 
         <dependency>
             <groupId>org.projectlombok</groupId>

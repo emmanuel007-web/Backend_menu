@@ -1,0 +1,26 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+node_modules/
+
+### IDEs ###
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+### Logs y temporales ###
+*.log
+logs/
+tmp/
+
+### Entorno y secretos ###
+.env
+.env.*
+*.pem
+*.key
+
+### Sistema ###
+.DS_Store
+Thumbs.db

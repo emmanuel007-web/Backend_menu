@@ -52,7 +52,7 @@ class SubscriptionServiceTest {
                 new AppProperties.Jwt("c2VjcmV0by1kZS1wcnVlYmEtc2VndXJvLWxvbmctZW5vdWdoLXNlY3JldA==", 15, 7),
                 new AppProperties.Cors(java.util.List.of("http://localhost:4200")),
                 "http://localhost:4200", "http://localhost:8080", "./uploads",
-                new AppProperties.Security(false, 3600), new AppProperties.Payments("", ""));
+                new AppProperties.Security(false, 3600), new AppProperties.Payments("", "", "", ""));
         service = new SubscriptionService(subscriptionRepository, planRepository,
                 new ManualPaymentGateway(appProperties), appProperties);
     }
@@ -79,7 +79,7 @@ class SubscriptionServiceTest {
 
             SubscribeResult result = service.subscribe(new SubscriptionRequest("PRO"));
 
-            assertThat(result.checkoutUrl()).isNull();
+            assertThat(result.checkoutSessionId()).isNull();
             SubscriptionResponse response = result.subscription();
             assertThat(response.status()).isEqualTo(Subscription.STATUS_ACTIVE);
             assertThat(response.endsAt()).isNotNull(); // plan de pago: período de 30 días
@@ -178,7 +178,7 @@ class SubscriptionServiceTest {
                 1L, "PRO", "sub_123", Instant.now().plusSeconds(86400));
 
         assertThat(response.status()).isEqualTo(Subscription.STATUS_ACTIVE);
-        assertThat(response.provider()).isEqualTo(Subscription.PROVIDER_STRIPE);
+        assertThat(response.provider()).isEqualTo(Subscription.PROVIDER_EPAYCO);
         assertThat(response.providerReference()).isEqualTo("sub_123");
         assertThat(response.endsAt()).isNotNull();
     }

@@ -52,7 +52,7 @@ public class SecurityConfig {
                         .sessionAuthenticationStrategy((authentication, request, response) -> {
                         })
                         // Endpoints que se autentican con credenciales propias, pedidos públicos o firma
-                        // criptográfica (webhook de Stripe).
+                        // criptográfica (webhook de ePayco).
                         .ignoringRequestMatchers("/api/auth/login", "/api/auth/register", "/api/public/orders/**", "/api/webhooks/**"))
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -63,8 +63,11 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         // API pública: menús + archivos con URL firmada (expiración + HMAC)
                         .requestMatchers("/api/public/**").permitAll()
-                        // Auth: login/register (CSRF exento), csrf (bootstrap del frontend)
-                        .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/csrf").permitAll()
+                        // Auth: login/register/refresh/logout se autentican con credenciales
+                        // o con el propio token de la cookie (refresh/logout deben funcionar
+                        // incluso con el access token expirado); csrf es el bootstrap del SPA.
+                        .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/csrf",
+                                "/api/auth/refresh", "/api/auth/logout").permitAll()
                         // Webhooks de pasarela de pagos (firma verificada por el proveedor)
                         .requestMatchers("/api/webhooks/**").permitAll()
                         // Swagger / Actuator

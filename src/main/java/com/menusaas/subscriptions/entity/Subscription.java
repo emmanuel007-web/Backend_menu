@@ -26,6 +26,8 @@ public class Subscription {
     public static final String STATUS_CANCELLED = "CANCELLED";
 
     public static final String PROVIDER_MANUAL = "MANUAL";
+    public static final String PROVIDER_EPAYCO = "EPAYCO";
+    /** Retrocompatibilidad: suscripciones creadas con Stripe antes del migración. */
     public static final String PROVIDER_STRIPE = "STRIPE";
 
     @Id
@@ -41,11 +43,11 @@ public class Subscription {
     @Column(nullable = false, length = 30)
     private String status = STATUS_ACTIVE;
 
-    /** Proveedor de pago: MANUAL (sin pasarela) o STRIPE. */
+    /** Proveedor de pago: MANUAL (sin pasarela) o EPAYCO. */
     @Column(nullable = false, length = 20)
     private String provider = PROVIDER_MANUAL;
 
-    /** Referencia en el proveedor (id de sesión/suscripción de Stripe). */
+    /** Referencia en el proveedor (sessionId de ePayco o ref_payco). */
     @Column(name = "provider_reference", length = 255)
     private String providerReference;
 

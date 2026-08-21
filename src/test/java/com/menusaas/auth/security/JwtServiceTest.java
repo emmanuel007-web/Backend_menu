@@ -23,7 +23,7 @@ class JwtServiceTest {
                 new AppProperties.Jwt("dGVzdC1zZWNyZXQtbWVudS1zYWFzLWp3dC1zZWNyZXQtbG9uZy1lbm91Z2gtMjAyNi0wOA==", 15, 7),
                 new AppProperties.Cors(List.of("http://localhost:4200")),
                 "http://localhost:4200", "http://localhost:8080", "./uploads",
-                new AppProperties.Security(false, 3600), new AppProperties.Payments("", "")
+                new AppProperties.Security(false, 3600), new AppProperties.Payments("", "", "", "")
         );
         jwtService = new JwtService(props);
     }

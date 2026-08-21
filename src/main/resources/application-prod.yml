@@ -28,5 +28,7 @@ app:
     cookies-secure: ${COOKIES_SECURE:true}
     signed-url-ttl-seconds: ${SIGNED_URL_TTL:3600}
   payments:
-    stripe-secret-key: ${STRIPE_SECRET_KEY:}
-    stripe-webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+    epayco-public-key: ${EPAYCO_PUBLIC_KEY:}
+    epayco-private-key: ${EPAYCO_PRIVATE_KEY:}
+    epayco-customer-id: ${EPAYCO_CUSTOMER_ID:}
+    epayco-p-key: ${EPAYCO_P_KEY:}

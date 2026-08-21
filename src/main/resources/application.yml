@@ -2,7 +2,7 @@ spring:
   application:
     name: menu-saas-backend
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/menu_saas}
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/menu_saas}
     username: ${DB_USER:menu_saas}
     password: ${DB_PASSWORD:menu_saas}
   jpa:
@@ -42,10 +42,12 @@ app:
     cookies-secure: ${COOKIES_SECURE:false}
     signed-url-ttl-seconds: ${SIGNED_URL_TTL:3600}
   payments:
-    # Pasarela de pagos (Stripe). Si no se configuran las claves, el sistema
-    # opera en modo manual (solo desarrollo/pruebas).
-    stripe-secret-key: ${STRIPE_SECRET_KEY:}
-    stripe-webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+    # Pasarela de pagos: ePayco Smart Checkout v2.
+    # Si no se configuran las claves, el sistema opera en modo manual (solo dev/pruebas).
+    epayco-public-key: ${EPAYCO_PUBLIC_KEY:}
+    epayco-private-key: ${EPAYCO_PRIVATE_KEY:}
+    epayco-customer-id: ${EPAYCO_CUSTOMER_ID:}
+    epayco-p-key: ${EPAYCO_P_KEY:}
 
 springdoc:
   swagger-ui:

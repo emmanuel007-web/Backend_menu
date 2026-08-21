@@ -25,7 +25,7 @@ public record AppProperties(
         if (uploadDir == null) uploadDir = "./uploads";
         if (cors == null) cors = new Cors(new ArrayList<>());
         if (security == null) security = new Security(false, 3600);
-        if (payments == null) payments = new Payments(null, null);
+        if (payments == null) payments = new Payments(null, null, null, null);
     }
 
     public record Jwt(
@@ -60,8 +60,14 @@ public record AppProperties(
     }
 
     /**
-     * Stripe: si las claves están vacías, la pasarela opera en modo manual (solo dev).
+     * ePayco: credenciales para Smart Checkout v2 (Apify API).
+     * Si publicKey está vacía, la pasarela opera en modo manual (solo dev).
      */
-    public record Payments(String stripeSecretKey, String stripeWebhookSecret) {
+    public record Payments(
+            String epaycoPublicKey,
+            String epaycoPrivateKey,
+            String epaycoCustomerId,
+            String epaycoPKey
+    ) {
     }
 }
