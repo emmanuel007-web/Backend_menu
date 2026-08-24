@@ -26,4 +26,6 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
     long countByActive(boolean active);
 
     java.util.List<Restaurant> findAllByOrderByIdDesc();
+
+    java.util.List<Restaurant> findAllByActiveTrueOrderByNameAsc();
 }

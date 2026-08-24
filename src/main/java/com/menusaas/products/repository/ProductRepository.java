@@ -15,6 +15,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     Page<Product> findByRestaurantIdOrderByPositionAsc(Long restaurantId, Pageable pageable);
 
+    @Query("select p.restaurantId, count(p) from Product p where p.available = true group by p.restaurantId")
+    List<Object[]> countAvailableGroupedByRestaurant();
+
     Page<Product> findByCategoryIdAndRestaurantIdOrderByPositionAsc(Long categoryId, Long restaurantId, Pageable pageable);
 
     Optional<Product> findByIdAndRestaurantId(Long id, Long restaurantId);
