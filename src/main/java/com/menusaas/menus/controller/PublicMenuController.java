@@ -50,6 +50,7 @@ public class PublicMenuController {
                         r.getPhone(),
                         r.getWhatsapp(),
                         r.getAddress(),
+                        r.isOpen(),
                         productCounts.getOrDefault(r.getId(), 0L)))
                 .toList();
         return ApiResponse.ok(directory);

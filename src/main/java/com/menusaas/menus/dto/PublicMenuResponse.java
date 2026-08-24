@@ -16,7 +16,8 @@ public record PublicMenuResponse(
             String address,
             String whatsapp,
             String instagram,
-            String facebook
+            String facebook,
+            boolean open
     ) {
     }
 

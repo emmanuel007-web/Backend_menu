@@ -13,6 +13,7 @@ public record DirectoryRestaurantResponse(
         String phone,
         String whatsapp,
         String address,
+        boolean open,
         long productCount
 ) {
 }

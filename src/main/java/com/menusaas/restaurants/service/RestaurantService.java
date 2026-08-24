@@ -44,6 +44,14 @@ public class RestaurantService {
     }
 
     @Transactional
+    public RestaurantResponse setOpenMine(boolean open) {
+        Long restaurantId = SecurityUtils.currentRestaurantId();
+        Restaurant restaurant = findByIdOrThrow(restaurantId);
+        restaurant.setOpen(open);
+        return toResponse(restaurantRepository.save(restaurant));
+    }
+
+    @Transactional
     public RestaurantResponse updateById(Long id, RestaurantRequest request) {
         requireSuperAdmin();
         Restaurant restaurant = findByIdOrThrow(id);
@@ -75,6 +83,9 @@ public class RestaurantService {
         if (request.active() != null) {
             restaurant.setActive(request.active());
         }
+        if (request.open() != null) {
+            restaurant.setOpen(request.open());
+        }
         return restaurantRepository.save(restaurant);
     }
 
@@ -93,7 +104,7 @@ public class RestaurantService {
         return new RestaurantResponse(
                 r.getId(), r.getName(), r.getSlug(), signedUrlService.toSignedUrlOrNull(r.getLogoUrl()), r.getDescription(),
                 r.getPhone(), r.getAddress(), r.getWhatsapp(), r.getInstagram(), r.getFacebook(),
-                r.isActive(), r.getCreatedAt(), r.getUpdatedAt()
+                r.isActive(), r.isOpen(), r.getCreatedAt(), r.getUpdatedAt()
         );
     }
 }

@@ -37,6 +37,10 @@ public class OrderService {
                 .filter(Restaurant::isActive)
                 .orElseThrow(() -> new ResourceNotFoundException("El menú digital no existe o no está disponible"));
 
+        if (!restaurant.isOpen()) {
+            throw new BadRequestException("El restaurante está cerrado en este momento y no puede recibir pedidos. Inténtalo más tarde.");
+        }
+
         Long restaurantId = restaurant.getId();
 
         Order order = Order.builder()

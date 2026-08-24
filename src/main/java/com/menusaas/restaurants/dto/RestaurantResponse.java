@@ -14,6 +14,7 @@ public record RestaurantResponse(
         String instagram,
         String facebook,
         boolean active,
+        boolean open,
         Instant createdAt,
         Instant updatedAt
 ) {

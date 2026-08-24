@@ -58,7 +58,8 @@ public class PublicMenuService {
                         restaurant.getName(), restaurant.getSlug(),
                         signedUrlService.toSignedUrlOrNull(restaurant.getLogoUrl()),
                         restaurant.getDescription(), restaurant.getPhone(), restaurant.getAddress(),
-                        restaurant.getWhatsapp(), restaurant.getInstagram(), restaurant.getFacebook()
+                        restaurant.getWhatsapp(), restaurant.getInstagram(), restaurant.getFacebook(),
+                        restaurant.isOpen()
                 ),
                 categoryInfos
         );

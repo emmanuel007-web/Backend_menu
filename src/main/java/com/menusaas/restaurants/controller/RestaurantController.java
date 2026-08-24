@@ -1,5 +1,6 @@
 package com.menusaas.restaurants.controller;
 
+import com.menusaas.restaurants.dto.RestaurantOpenRequest;
 import com.menusaas.restaurants.dto.RestaurantRequest;
 import com.menusaas.restaurants.dto.RestaurantResponse;
 import com.menusaas.restaurants.service.RestaurantService;
@@ -29,6 +30,12 @@ public class RestaurantController {
     @PutMapping("/me")
     public ApiResponse<RestaurantResponse> updateMine(@Valid @RequestBody RestaurantRequest request) {
         return ApiResponse.ok("Restaurante actualizado", restaurantService.updateMine(request));
+    }
+
+    @Operation(summary = "Abrir o cerrar mi restaurante (bloquea nuevos pedidos al cerrar)")
+    @PatchMapping("/me/open")
+    public ApiResponse<RestaurantResponse> setOpenMine(@Valid @RequestBody RestaurantOpenRequest request) {
+        return ApiResponse.ok("Estado actualizado", restaurantService.setOpenMine(request.open()));
     }
 
     @Operation(summary = "Obtener restaurante por id (solo SUPER_ADMIN)")

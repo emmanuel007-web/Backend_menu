@@ -54,6 +54,13 @@ public class Restaurant {
     @Column(nullable = false)
     private boolean active = true;
 
+    /**
+     * Interruptor de servicio: el dueño lo apaga para dejar de recibir
+     * pedidos (cerrado). No afecta la visibilidad del menu publico.
+     */
+    @Column(name = "open", nullable = false)
+    private boolean open = true;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
