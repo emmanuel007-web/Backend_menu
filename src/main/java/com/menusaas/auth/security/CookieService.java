@@ -32,7 +32,7 @@ public class CookieService {
 
     public void setRefreshToken(HttpServletResponse response, String token) {
         response.addCookie(cookie(REFRESH_COOKIE, token,
-                appProperties.jwt().refreshTokenTtlDays() * 86400, COOKIE_PATH_AUTH));
+                appProperties.jwt().refreshTokenTtlHours() * 3600, COOKIE_PATH_AUTH));
     }
 
     /**

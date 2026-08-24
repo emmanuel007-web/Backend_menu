@@ -27,7 +27,7 @@ class SignedUrlServiceTest {
                 new AppProperties.Jwt("c2VjcmV0by1kZS1wcnVlYmEtc2VndXJvLWxvbmctZW5vdWdoLXNlY3JldA==", 15, 7),
                 new AppProperties.Cors(java.util.List.of("http://localhost:4200")),
                 "http://localhost:4200", "http://localhost:8080", "./uploads",
-                new AppProperties.Security(false, 3600), new AppProperties.Payments("", "", "", ""));
+                new AppProperties.Security(false, 3600, 24), new AppProperties.Payments("", "", "", ""));
         signedUrlService = new SignedUrlService(props);
     }
 

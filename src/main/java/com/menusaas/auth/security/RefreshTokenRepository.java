@@ -19,6 +19,14 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     int deleteExpiredOrRevoked(Instant now);
 
     @Modifying
+    @Query("update RefreshToken t set t.revoked = true where t.userId = :userId and t.revoked = false")
+    int revokeAllActiveByUserId(Long userId);
+
+    @Modifying
+    @Query("delete from RefreshToken t where t.sessionExpiresAt < :cutoff or (t.revoked = true and t.expiresAt < :cutoff)")
+    int deleteStaleTokens(Instant cutoff);
+
+    @Modifying
     @Query("delete from RefreshToken t where t.userId = :userId")
     void deleteByUserId(Long userId);
 }

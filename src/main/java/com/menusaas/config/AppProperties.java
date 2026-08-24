@@ -24,14 +24,14 @@ public record AppProperties(
         if (apiBaseUrl == null) apiBaseUrl = "http://localhost:8080";
         if (uploadDir == null) uploadDir = "./uploads";
         if (cors == null) cors = new Cors(new ArrayList<>());
-        if (security == null) security = new Security(false, 3600);
+        if (security == null) security = new Security(false, 3600, 24);
         if (payments == null) payments = new Payments(null, null, null, null);
     }
 
     public record Jwt(
             @NotBlank String secret,
             @Min(1) @Max(1440) int accessTokenTtlMinutes,
-            @Min(1) @Max(90) int refreshTokenTtlDays
+            @Min(1) @Max(168) int refreshTokenTtlHours
     ) {
 
         public Jwt {
@@ -39,7 +39,7 @@ public record AppProperties(
                 throw new IllegalArgumentException("app.jwt.secret no puede estar vacío");
             }
             if (accessTokenTtlMinutes == 0) accessTokenTtlMinutes = 15;
-            if (refreshTokenTtlDays == 0) refreshTokenTtlDays = 7;
+            if (refreshTokenTtlHours == 0) refreshTokenTtlHours = 24;
         }
     }
 
@@ -53,9 +53,11 @@ public record AppProperties(
      * cookiesSecure: cookies HttpOnly/SameSite con flag Secure (obligatorio en HTTPS).
      * signedUrlTtlSeconds: tiempo de vida de las URLs firmadas de imágenes.
      */
-    public record Security(boolean cookiesSecure, long signedUrlTtlSeconds) {
+    public record Security(boolean cookiesSecure, long signedUrlTtlSeconds,
+                           int sessionAbsoluteTtlHours) {
         public Security {
             if (signedUrlTtlSeconds <= 0) signedUrlTtlSeconds = 3600;
+            if (sessionAbsoluteTtlHours <= 0) sessionAbsoluteTtlHours = 24;
         }
     }
 

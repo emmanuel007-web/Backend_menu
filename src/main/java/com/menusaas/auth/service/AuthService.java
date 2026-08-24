@@ -7,6 +7,7 @@ import com.menusaas.auth.security.JwtService;
 import com.menusaas.auth.security.RefreshToken;
 import com.menusaas.auth.security.RefreshTokenRepository;
 import com.menusaas.auth.security.UserPrincipal;
+import com.menusaas.config.AppProperties;
 import com.menusaas.restaurants.entity.Restaurant;
 import com.menusaas.restaurants.repository.RestaurantRepository;
 import com.menusaas.shared.api.BadRequestException;
@@ -26,7 +27,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.HexFormat;
 import java.util.UUID;
 
 @Slf4j
@@ -41,6 +47,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final AppProperties appProperties;
 
     /**
      * Resultado interno: los tokens se entregan al controlador para
@@ -100,23 +107,37 @@ public class AuthService {
 
     @Transactional
     public AuthResult refresh(String refreshToken) {
-        RefreshToken stored = refreshTokenRepository.findByToken(refreshToken)
-                .filter(t -> !t.isRevoked())
-                .filter(t -> t.getExpiresAt().isAfter(Instant.now()))
+        String hashed = hashToken(refreshToken);
+        RefreshToken stored = refreshTokenRepository.findByToken(hashed)
                 .orElseThrow(() -> new BadRequestException("Sesión expirada, inicie sesión nuevamente"));
 
-        User user = userRepository.findById(stored.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
-
-        if (!user.isActive()) {
-            throw new ForbiddenException("La cuenta está desactivada");
+        // Detección de robo: un token revocado que vuelve a presentarse indica
+        // que dos partes lo usan. Se mata la sesion completa del usuario.
+        if (stored.isRevoked()) {
+            int killed = refreshTokenRepository.revokeAllActiveByUserId(stored.getUserId());
+            log.warn("REUSO DE REFRESH TOKEN detectado para userId={}: {} sesiones revocadas",
+                    stored.getUserId(), killed);
+            throw new ForbiddenException("Sesión inválida, inicie sesión nuevamente");
         }
 
-        // Rotación: el refresh token usado se revoca y se emite uno nuevo.
-        stored.setRevoked(true);
-        refreshTokenRepository.save(stored);
+        if (stored.getExpiresAt().isAfter(Instant.now())
+                && stored.getSessionExpiresAt().isAfter(Instant.now())) {
+            User user = userRepository.findById(stored.getUserId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
 
-        return buildAuthResult(user);
+            if (!user.isActive()) {
+                throw new ForbiddenException("La cuenta está desactivada");
+            }
+
+            // Rotación: el refresh token usado se revoca y se emite uno nuevo.
+            // El tope absoluto de sesion se hereda SIN extender.
+            stored.setRevoked(true);
+            refreshTokenRepository.save(stored);
+
+            return buildAuthResult(user, stored.getSessionExpiresAt());
+        }
+
+        throw new BadRequestException("Sesión expirada, inicie sesión nuevamente");
     }
 
     @Transactional(readOnly = true)
@@ -151,13 +172,22 @@ public class AuthService {
     }
 
     private AuthResult buildAuthResult(User user) {
+        Instant sessionExpiry = Instant.now()
+                .plus(appProperties.security().sessionAbsoluteTtlHours(), ChronoUnit.HOURS);
+        return buildAuthResult(user, sessionExpiry);
+    }
+
+    private AuthResult buildAuthResult(User user, Instant sessionExpiresAt) {
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
         refreshTokenRepository.save(RefreshToken.builder()
                 .userId(user.getId())
-                .token(refreshToken)
+                // En BD solo se guarda el hash: un dump de la tabla no permite
+                // secuestrar sesiones.
+                .token(hashToken(refreshToken))
                 .expiresAt(jwtService.refreshTokenExpiry())
+                .sessionExpiresAt(sessionExpiresAt)
                 .revoked(false)
                 .build());
 
@@ -169,6 +199,16 @@ public class AuthService {
                 user.getRestaurant() != null ? user.getRestaurant().getId() : null
         );
         return new AuthResult(accessToken, refreshToken, userInfo);
+    }
+
+    static String hashToken(String rawToken) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256")
+                    .digest(rawToken.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 no disponible", e);
+        }
     }
 
     private String normalizeEmail(String email) {

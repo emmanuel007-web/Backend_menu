@@ -43,7 +43,7 @@ class LocalFileStorageServiceTest {
                 new AppProperties.Jwt("c2VjcmV0by1kZS1wcnVlYmEtc2VndXJvLWxvbmctZW5vdWdoLXNlY3JldA==", 15, 7),
                 new AppProperties.Cors(java.util.List.of("http://localhost:4200")),
                 "http://localhost:4200", "http://localhost:8080", tempDir.toString(),
-                new AppProperties.Security(false, 3600), new AppProperties.Payments("", "", "", ""));
+                new AppProperties.Security(false, 3600, 24), new AppProperties.Payments("", "", "", ""));
         storage = new LocalFileStorageService(props);
     }
 

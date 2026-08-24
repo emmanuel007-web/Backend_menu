@@ -32,6 +32,13 @@ public class RefreshToken {
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
 
+    /**
+     * Tope absoluto de la sesion: fijado en el login y heredado sin extender
+     * por cada rotacion. Al vencer, el usuario debe autenticarse de nuevo.
+     */
+    @Column(name = "session_expires_at", nullable = false)
+    private Instant sessionExpiresAt;
+
     @Column(nullable = false)
     private boolean revoked;
 

@@ -32,15 +32,16 @@ app:
     # Generar con: openssl rand -base64 64
     secret: ${JWT_SECRET:Y2hhbmdlLW1lLWxvY2FsLW1lbnUtc2Fhcy1qd3Qtc2VjcmV0LXNlY3JldC1kZW1vLTIwMjYtMDgtMTg=}
     access-token-ttl-minutes: ${JWT_ACCESS_TTL:15}
-    refresh-token-ttl-days: ${JWT_REFRESH_TTL:7}
+    refresh-token-ttl-hours: ${JWT_REFRESH_TTL_HOURS:24}
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://localhost:8080}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://localhost:3000,http://localhost:8080}
   app-base-url: ${APP_BASE_URL:http://localhost:4200}
   api-base-url: ${API_BASE_URL:http://localhost:8080}
   upload-dir: ${UPLOAD_DIR:./uploads}
   security:
     cookies-secure: ${COOKIES_SECURE:false}
     signed-url-ttl-seconds: ${SIGNED_URL_TTL:3600}
+    session-absolute-ttl-hours: ${SESSION_ABSOLUTE_TTL_HOURS:24}
   payments:
     # Pasarela de pagos: ePayco Smart Checkout v2.
     # Si no se configuran las claves, el sistema opera en modo manual (solo dev/pruebas).

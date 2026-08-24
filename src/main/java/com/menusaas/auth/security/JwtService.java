@@ -72,7 +72,7 @@ public class JwtService {
                 .subject(user.getEmail())
                 .claims(Map.of(CLAIM_USER_ID, user.getId()))
                 .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plus(jwtProps.refreshTokenTtlDays(), ChronoUnit.DAYS)))
+                .expiration(Date.from(now.plus(jwtProps.refreshTokenTtlHours(), ChronoUnit.HOURS)))
                 .signWith(key)
                 .compact();
     }
@@ -89,7 +89,7 @@ public class JwtService {
     }
 
     public Instant refreshTokenExpiry() {
-        return Instant.now().plus(jwtProps.refreshTokenTtlDays(), ChronoUnit.DAYS);
+        return Instant.now().plus(jwtProps.refreshTokenTtlHours(), ChronoUnit.HOURS);
     }
 
     public long accessTokenTtlSeconds() {
