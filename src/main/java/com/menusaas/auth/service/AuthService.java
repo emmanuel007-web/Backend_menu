@@ -111,8 +111,11 @@ public class AuthService {
             throw new BadRequestException("Sesión expirada, inicie sesión nuevamente");
         }
         String hashed = hashToken(refreshToken);
+        log.info("Refresh attempt: hashed={}", hashed.substring(0, 8));
         RefreshToken stored = refreshTokenRepository.findByToken(hashed)
                 .orElseThrow(() -> new BadRequestException("Sesión expirada, inicie sesión nuevamente"));
+        log.info("Refresh token found: userId={}, revoked={}, expiresAt={}, sessionExpiresAt={}",
+                stored.getUserId(), stored.isRevoked(), stored.getExpiresAt(), stored.getSessionExpiresAt());
 
         // Detección de robo: un token revocado que vuelve a presentarse indica
         // que dos partes lo usan. Se mata la sesion completa del usuario.
@@ -123,24 +126,25 @@ public class AuthService {
             throw new ForbiddenException("Sesión inválida, inicie sesión nuevamente");
         }
 
-        if (stored.getExpiresAt().isAfter(Instant.now())
-                && stored.getSessionExpiresAt().isAfter(Instant.now())) {
-            User user = userRepository.findById(stored.getUserId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
-
-            if (!user.isActive()) {
-                throw new ForbiddenException("La cuenta está desactivada");
-            }
-
-            // Rotación: el refresh token usado se revoca y se emite uno nuevo.
-            // El tope absoluto de sesion se hereda SIN extender.
-            stored.setRevoked(true);
-            refreshTokenRepository.save(stored);
-
-            return buildAuthResult(user, stored.getSessionExpiresAt());
+        Instant sessionExpiry = stored.getSessionExpiresAt();
+        if (sessionExpiry == null || sessionExpiry.isBefore(Instant.now())
+                || stored.getExpiresAt().isBefore(Instant.now())) {
+            throw new BadRequestException("Sesión expirada, inicie sesión nuevamente");
         }
 
-        throw new BadRequestException("Sesión expirada, inicie sesión nuevamente");
+        User user = userRepository.findById(stored.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+
+        if (!user.isActive()) {
+            throw new ForbiddenException("La cuenta está desactivada");
+        }
+
+        // Rotación: el refresh token usado se revoca y se emite uno nuevo.
+        // El tope absoluto de sesion se hereda SIN extender.
+        stored.setRevoked(true);
+        refreshTokenRepository.save(stored);
+
+        return buildAuthResult(user, sessionExpiry);
     }
 
     @Transactional(readOnly = true)
