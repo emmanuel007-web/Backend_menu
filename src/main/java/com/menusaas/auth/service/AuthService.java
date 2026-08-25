@@ -107,6 +107,9 @@ public class AuthService {
 
     @Transactional
     public AuthResult refresh(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new BadRequestException("Sesión expirada, inicie sesión nuevamente");
+        }
         String hashed = hashToken(refreshToken);
         RefreshToken stored = refreshTokenRepository.findByToken(hashed)
                 .orElseThrow(() -> new BadRequestException("Sesión expirada, inicie sesión nuevamente"));
